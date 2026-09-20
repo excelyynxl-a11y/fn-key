@@ -4,8 +4,9 @@ Shared JavaScript development foundation for the team. It contains a minimal Rea
 
 ## Stack and prerequisites
 
-- React 19, Vite 8, Node.js 24 LTS, Express 5, Mongoose 9, MongoDB 8.0.
+- React 19, Vite 8, Tailwind CSS 4, Node.js 24 LTS, Express 5, Mongoose 9, MongoDB 8.0.
 - npm with committed lockfiles, Nodemon, Docker and Docker Compose v2.
+- Backend authentication dependencies: `jsonwebtoken` for JWT signing/verification and `bcryptjs` for password hashing/comparison. Authentication routes and token configuration will be added when authentication is implemented.
 - Install Git and Docker Desktop, and keep Docker Desktop running with Linux containers. On Windows enable its WSL 2 backend. Linux users can use Docker Engine with the Compose plugin.
 - No local Node.js, npm or MongoDB installation is required.
 
@@ -43,6 +44,14 @@ Use Ctrl+C to stop an attached run. After Dockerfile or dependency changes, use 
 Source directories are bind-mounted. Separate named volumes hold Linux `node_modules`, isolating them from host dependencies. Each app runs `npm ci` automatically on startup to synchronize its dependency volume with the lockfile. This requires registry access when dependencies are not cached and adds a short startup delay.
 
 To add a dependency without local npm, use `docker compose exec server npm install <package>` (or replace `server` with `client`), then commit both package files and rebuild. A frontend production build can be checked with `docker compose exec client npm run build`.
+
+## Frontend styling
+
+Use Tailwind utility classes in React `className` attributes. Tailwind is integrated through the official `@tailwindcss/vite` plugin; `client/src/styles.css` imports Tailwind and is loaded by `main.jsx`. Classes in frontend source files are detected automatically, and edits use the existing Vite hot reload workflow.
+
+For example: `<h1 className="text-3xl font-bold text-slate-900">Hello</h1>`.
+
+This uses Tailwind 4: no separate Tailwind or PostCSS configuration file is needed for the default setup. See the [Tailwind Vite guide](https://tailwindcss.com/docs/installation/using-vite).
 
 ## Environment variables
 
