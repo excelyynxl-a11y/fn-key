@@ -1,5 +1,6 @@
 import { z } from 'zod';
 import Email from '../models/Email.js';
+import AuditEvent from '../models/AuditEvent.js';
 import { COMPARISON_STATUSES, EMAIL_CATEGORIES } from '../constants/challenge.js';
 
 const listEmailSchema = z.object({
@@ -89,7 +90,10 @@ export async function listEmailsController(req, res) {
 
 export async function getEmailController(req, res) {
   const { runId } = getEmailSchema.parse(req.query);
-  const email = await Email.findOne({ emailId: req.params.emailId, lastRunId: runId }).lean({ flattenMaps: true });
+  const [email, timeline] = await Promise.all([
+    Email.findOne({ emailId: req.params.emailId, lastRunId: runId }).lean({ flattenMaps: true }),
+    AuditEvent.find({ emailId: req.params.emailId }).sort({ createdAt: 1 }).lean()
+  ]);
   if (!email) return res.status(404).json({ data: null, error: { code: 'EMAIL_NOT_FOUND', message: 'Email not found', retryable: false }, meta: {} });
-  return res.json({ data: email, error: null, meta: {} });
+  return res.json({ data: { ...email, timeline }, error: null, meta: {} });
 }

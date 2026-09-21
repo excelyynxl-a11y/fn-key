@@ -31,6 +31,8 @@ const attachmentSchema = new mongoose.Schema({
   },
   documentType: { type: String, enum: ['SI', 'BL', 'UNKNOWN'], default: 'UNKNOWN' },
   roleMethod: { type: String, enum: ['rule', 'ai', 'human'], default: null },
+  roleConfidence: { type: Number, min: 0, max: 1, default: null },
+  roleMargin: { type: Number, default: null },
   roleScores: { type: Map, of: Number, default: {} },
   roleEvidence: { type: [mongoose.Schema.Types.Mixed], default: [] }
 }, { _id: false });

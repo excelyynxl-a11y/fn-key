@@ -36,6 +36,9 @@ function attachRoleEvidence(attachments, roles) {
       ...attachment,
       documentType: decision?.documentType ?? 'UNKNOWN',
       roleMethod: decision?.documentType && decision.documentType !== 'UNKNOWN' ? 'rule' : null,
+      roleConfidence: decision?.documentType && decision.documentType !== 'UNKNOWN'
+        ? Math.min(0.99, 0.6 + (decision?.roleMargin ?? 0) / 20)
+        : null,
       roleScores: decision?.roleScores ?? {},
       roleEvidence: decision?.roleEvidence ?? [],
       roleMargin: decision?.roleMargin ?? 0

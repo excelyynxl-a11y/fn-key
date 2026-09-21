@@ -1,6 +1,7 @@
 import { randomUUID } from 'node:crypto';
 import { PIPELINE_VERSION } from '../constants/challenge.js';
 import Email from '../models/Email.js';
+import AuditEvent from '../models/AuditEvent.js';
 import ProcessingRun from '../models/ProcessingRun.js';
 import { createDatasetRepository } from '../repositories/datasetRepository.js';
 import { defaultDatasetPath, importDataset } from './inboxService.js';
@@ -37,7 +38,7 @@ export function counterIncrement(processed) {
   };
 }
 
-async function processOneEmail(email, repository, runId, classificationOptions) {
+async function processOneEmail(email, repository, runId, classificationOptions, { retry = false } = {}) {
   await Email.updateOne(
     { emailId: email.emailId },
     { $set: { processingState: 'processing', lastRunId: runId } }
@@ -48,7 +49,34 @@ async function processOneEmail(email, repository, runId, classificationOptions) 
   );
 
   try {
+    await AuditEvent.create({
+      eventType: retry ? 'email.retry.started' : 'email.processing.started',
+      entityType: 'email',
+      entityId: email.emailId,
+      runId,
+      emailId: email.emailId,
+      details: { retry }
+    });
     const processed = await processEmail(email, repository, classificationOptions);
+    await AuditEvent.create({
+      eventType: 'email.processing.completed',
+      entityType: 'email',
+      entityId: email.emailId,
+      runId,
+      emailId: email.emailId,
+      details: {
+        retry,
+        category: processed.classification.category,
+        classificationMethod: processed.classification.method,
+        classificationCacheHit: processed.classification.cacheHit ?? false,
+        documentRoleMethods: [processed.documents?.si?.roleMethod, processed.documents?.bl?.roleMethod].filter(Boolean),
+        fieldMethods: [...new Set(Object.values(processed.documents ?? {}).flatMap((document) => (
+          Object.values(document?.fields ?? {}).map(({ method }) => method).filter(Boolean)
+        )))],
+        status: processed.result.status,
+        reviewReason: processed.result.reviewReason
+      }
+    });
     await Email.updateOne({ emailId: email.emailId }, {
       $set: {
         processingState: 'completed',
@@ -79,6 +107,14 @@ async function processOneEmail(email, repository, runId, classificationOptions) 
       $inc: { 'counts.processing': -1, 'counts.failed': 1 },
       $push: { runErrors: { emailId: email.emailId, code: errorCode, message: safeMessage } }
     });
+    await AuditEvent.create({
+      eventType: 'email.processing.failed',
+      entityType: 'email',
+      entityId: email.emailId,
+      runId,
+      emailId: email.emailId,
+      details: { retry, code: errorCode, message: safeMessage }
+    }).catch(() => {});
   }
 }
 
@@ -136,7 +172,7 @@ export async function executeRun(runId, { retryOnly = false } = {}) {
     const repository = createDatasetRepository(defaultDatasetPath());
     const concurrency = Number.parseInt(process.env.PROCESSING_CONCURRENCY ?? '4', 10);
     await runWithConcurrency(emails, Number.isInteger(concurrency) ? concurrency : 4, (email) => (
-      processOneEmail(email, repository, runId, { phraseEntries })
+      processOneEmail(email, repository, runId, { phraseEntries }, { retry: retryOnly })
     ));
 
     const completedRun = await ProcessingRun.findOne({ runId }).lean();

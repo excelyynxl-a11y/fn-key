@@ -22,10 +22,18 @@ export default function AttachmentSummary({ attachments = [] }) {
               {' · '}{attachment.exists === false ? 'missing' : attachment.parserStatus ?? 'not parsed'}
               {attachment.documentType && attachment.documentType !== 'UNKNOWN' ? ` · ${attachment.documentType}` : ''}
             </p>
-            {attachment.roleMethod && <p className="mt-1">Role identified by {attachment.roleMethod}</p>}
+            {attachment.roleMethod && <p className="mt-1">Role identified by {attachment.roleMethod}{attachment.roleConfidence != null ? ` · ${Math.round(attachment.roleConfidence * 100)}%` : ''}</p>}
             {attachment.parserError?.message && <p className="mt-1">{attachment.parserError.message}</p>}
             {!attachment.parserError?.message && attachment.parserWarnings?.[0] && (
               <p className="mt-1">{attachment.parserWarnings[0]}</p>
+            )}
+            {attachment.roleEvidence?.length > 0 && (
+              <details className="mt-2">
+                <summary className="cursor-pointer font-semibold">Role evidence</summary>
+                <ul className="mt-1 space-y-1">
+                  {attachment.roleEvidence.map((item, index) => <li key={`${item.phrase}-${index}`}>“{item.phrase}” · {item.source}</li>)}
+                </ul>
+              </details>
             )}
           </div>
         ))}

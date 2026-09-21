@@ -19,10 +19,15 @@ function FieldValue({ field }) {
   return (
     <div>
       <p className="font-medium text-slate-900">{field.rawValue}</p>
-      <p className="mt-1 text-xs text-slate-500">{field.evidence} · {location}</p>
+      <p className="mt-1 text-xs text-slate-500">Normalized: <span className="font-mono">{String(field.normalizedValue ?? 'unresolved')}</span></p>
       <p className="mt-1 text-[11px] uppercase tracking-wide text-slate-400">
         {field.method === 'ai' ? 'AI fallback' : 'Deterministic extraction'} · {Math.round((field.confidence ?? 0) * 100)}%
       </p>
+      <details className="mt-2 text-xs text-slate-500">
+        <summary className="cursor-pointer font-medium text-blue-700">Source evidence</summary>
+        <p className="mt-1 rounded bg-slate-50 p-2">{field.evidence}</p>
+        <p className="mt-1">{location}</p>
+      </details>
     </div>
   );
 }
@@ -47,7 +52,9 @@ export default function FieldComparisonTable({ email }) {
             <tr key={key} className={defects.has(key) ? 'bg-rose-50' : ''}>
               <th className="px-4 py-4 align-top font-semibold text-slate-700">
                 {label}
-                {defects.has(key) && <span className="ml-2 text-xs text-rose-600">Mismatch</span>}
+                <span className={`ml-2 text-xs ${defects.has(key) ? 'text-rose-600' : (!siFields[key]?.rawValue || !blFields[key]?.rawValue) ? 'text-amber-700' : 'text-emerald-700'}`}>
+                  {defects.has(key) ? 'Mismatch' : (!siFields[key]?.rawValue || !blFields[key]?.rawValue) ? 'Unresolved' : 'Match'}
+                </span>
               </th>
               <td className="px-4 py-4 align-top"><FieldValue field={siFields[key]} /></td>
               <td className="px-4 py-4 align-top"><FieldValue field={blFields[key]} /></td>

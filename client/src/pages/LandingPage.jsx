@@ -6,7 +6,9 @@ import FieldComparisonTable from '../components/FieldComparisonTable.jsx';
 import InboxFilters, { emptyInboxFilters } from '../components/InboxFilters.jsx';
 import RunProgress from '../components/RunProgress.jsx';
 import Sidebar from '../components/Sidebar.jsx';
+import SourceEmailPanel from '../components/SourceEmailPanel.jsx';
 import StatusBadge from '../components/StatusBadge.jsx';
+import ProcessingTimeline from '../components/ProcessingTimeline.jsx';
 import { request } from '../services/api.js';
 
 const LandingPage = () => {
@@ -214,6 +216,7 @@ const LandingPage = () => {
                     {selectedEmail.result?.category?.replaceAll('_', ' ')} via {selectedEmail.classification?.method}
                     {selectedEmail.result?.reviewReason && <span> · {selectedEmail.result.reviewReason.replaceAll('_', ' ')}</span>}
                   </div>
+                  <SourceEmailPanel source={selectedEmail.source} />
                   <ClassificationEvidence classification={selectedEmail.classification} />
                   {selectedEmail.result?.category === 'BL_COMPARISON' && (
                     <AttachmentSummary attachments={selectedEmail.source?.attachments} />
@@ -225,6 +228,7 @@ const LandingPage = () => {
                           ? 'Field comparison stopped at the review reason shown above.'
                           : 'This category does not continue to document comparison.'}
                       </p>}
+                  <ProcessingTimeline events={selectedEmail.timeline} />
                 </>
               ) : <p className="text-sm text-slate-500">Select an email to inspect it.</p>}
             </section>
