@@ -42,9 +42,9 @@ export default function KnowledgePanel() {
   }
 
   return (
-    <details className="mt-4 rounded-lg border border-violet-900/60 bg-violet-950/30 p-4 shadow-sm">
-      <summary className="flex cursor-pointer items-center gap-2 font-semibold text-violet-200"><BookOpen className="size-4" /> Adaptive knowledge base</summary>
-      <p className="mt-1 text-xs text-violet-300/80">Inspect provenance and safely change which learned signals participate in deterministic decisions.</p>
+    <section className="rounded-2xl border border-sky-100 bg-white p-6 shadow-sm shadow-sky-100/70">
+      <h2 className="flex items-center gap-2 text-lg font-semibold text-slate-950"><BookOpen className="size-5 text-blue-600" /> Knowledge entries</h2>
+      <p className="mt-2 text-sm text-slate-500">Inspect provenance and safely change which learned signals participate in deterministic decisions.</p>
       <div className="mt-3 flex flex-wrap gap-2">
         {kinds.map((item) => <button type="button" key={item} onClick={() => setKind(item)} className={`rounded-md px-3 py-1.5 text-xs font-semibold ${kind === item ? 'bg-violet-700 text-white' : 'border border-violet-800 bg-violet-950/60 text-violet-300 hover:bg-violet-900/50'}`}>{item.replaceAll('_', ' ')}</button>)}
       </div>
@@ -77,6 +77,6 @@ export default function KnowledgePanel() {
           {events.map((event) => <li key={event._id}><strong className="text-blue-100">{event.eventType}</strong> · {event.details?.phrase ?? event.entityId} · {event.createdAt ? new Date(event.createdAt).toLocaleString() : ''}</li>)}
         </ul>
       </details>
-    </details>
+    </section>
   );
 }

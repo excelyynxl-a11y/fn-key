@@ -34,6 +34,7 @@ const LandingPage = () => {
   const [reviewMeta, setReviewMeta] = useState({ total: 0, grouped: {} });
   const [busy, setBusy] = useState(true);
   const [error, setError] = useState('');
+  const [activeView, setActiveView] = useState('dashboard');
 
   const loadEmails = useCallback(async (runId, filters = emptyInboxFilters, requestedPage = 1) => {
     const query = new URLSearchParams({ runId, limit: '50', page: String(requestedPage) });
@@ -202,15 +203,15 @@ const LandingPage = () => {
 
   return (
     <div className="min-h-screen lg:flex">
-      <Sidebar />
-      <main className="min-w-0 flex-1 px-4 py-6 sm:px-8 lg:px-10">
+      <Sidebar activeView={activeView} onNavigate={setActiveView} />
+      <main className="min-w-0 flex-1 px-5 py-8 sm:px-8 lg:px-12 xl:px-14">
         <header className="flex flex-wrap items-center justify-between gap-4">
           <div>
-            <p className="text-sm font-semibold text-blue-500">Adaptive shipping document verification</p>
-            <h1 className="mt-1 text-3xl font-bold tracking-tight text-white">Inbox processing dashboard</h1>
-            <p className="mt-2 text-sm text-blue-300/70">Import the challenge bundle, compare SI and BL fields, and inspect every decision.</p>
+            <p className="text-xs font-bold uppercase tracking-[0.2em] text-blue-600">{activeView === 'dashboard' ? 'Operations workspace' : 'Adaptive intelligence'}</p>
+            <h1 className="mt-2 text-3xl font-bold tracking-tight text-slate-950 sm:text-4xl">{activeView === 'dashboard' ? 'Review with confidence' : 'Adaptive knowledge base'}</h1>
+            <p className="mt-3 max-w-2xl text-base text-slate-500">{activeView === 'dashboard' ? 'Process shipping documents, investigate exceptions, and keep every decision explainable.' : 'Review, promote, block, and audit the knowledge used by deterministic classification.'}</p>
           </div>
-          <button
+          {activeView === 'dashboard' && <button
             type="button"
             onClick={startRun}
             disabled={busy || ['queued', 'running', 'cancelling'].includes(run?.state)}
@@ -219,9 +220,12 @@ const LandingPage = () => {
             {['queued', 'running', 'cancelling'].includes(run?.state)
               ? <><LoaderCircle className="size-4 animate-spin" /> Processing…</>
               : <><Play className="size-4" /> Start new run</>}
-          </button>
+          </button>}
         </header>
 
+        {activeView === 'knowledge' ? (
+          <div className="mt-10"><KnowledgePanel /></div>
+        ) : <>
         {error && <div className="mt-6 rounded-md border border-rose-900/60 bg-rose-950/40 px-4 py-3 text-sm text-rose-300">{offline ? 'Offline: ' : ''}{error}</div>}
         {run?.runErrors?.length > 0 && (
           <div className="mt-4 rounded-md border border-amber-900/60 bg-amber-950/40 px-4 py-3 text-sm text-amber-300">
@@ -235,7 +239,6 @@ const LandingPage = () => {
         {run && terminalRunStates.includes(run.state) && (
           <div className="mt-4"><ReviewQueue reviews={reviews} grouped={reviewMeta.grouped} onSelect={selectEmail} selectedEmailId={selectedEmail?.emailId} /></div>
         )}
-        {run && terminalRunStates.includes(run.state) && <KnowledgePanel />}
         {run && terminalRunStates.includes(run.state) && (
           <MetricsPanel runId={run.runId} refreshKey={run.updatedAt ?? run.completedAt} />
         )}
@@ -312,6 +315,7 @@ const LandingPage = () => {
             </section>
           </div>
         )}
+        </>}
       </main>
     </div>
   );
