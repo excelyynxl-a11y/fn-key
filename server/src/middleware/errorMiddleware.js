@@ -24,7 +24,7 @@ export function errorHandler(error, _req, res, _next) {
     error: {
       code: error.code ?? 'INTERNAL_ERROR',
       message: status >= 500 ? 'An unexpected error occurred' : error.message,
-      retryable: status >= 500
+      retryable: error.retryable ?? status >= 500
     },
     meta: {}
   });

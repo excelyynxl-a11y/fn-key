@@ -7,6 +7,10 @@ function eventSummary(event) {
   if (event.eventType === 'email.processing.completed') {
     return `${details.classificationMethod ?? 'unknown'} classification · ${details.status ?? 'unknown result'}${details.classificationCacheHit ? ' · cache hit' : ''}`;
   }
+  if (event.eventType === 'review.corrected') return `${details.reviewer ?? 'Reviewer'} corrected the source-derived result · ${details.nextResult?.status ?? 'reprocessed'}`;
+  if (event.eventType === 'review.confirmed') return `${details.reviewer ?? 'Reviewer'} confirmed the existing result`;
+  if (event.eventType === 'review.reopened') return `${details.reviewer ?? 'Reviewer'} reopened the case · ${details.reason}`;
+  if (event.eventType === 'email.retry.completed') return `${details.status ?? 'unknown result'}${details.reviewReason ? ` · ${details.reviewReason.replaceAll('_', ' ')}` : ''}`;
   if (event.eventType?.startsWith('knowledge.')) return `${details.phrase ?? 'Knowledge entry'} · ${details.status ?? event.eventType.split('.').pop()}`;
   if (event.eventType === 'email.processing.failed') return `${details.code}: ${details.message}`;
   return details.retry ? 'Retry requested' : 'Processing started';

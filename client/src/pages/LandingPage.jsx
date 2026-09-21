@@ -12,6 +12,7 @@ import SourceEmailPanel from '../components/SourceEmailPanel.jsx';
 import StatusBadge from '../components/StatusBadge.jsx';
 import ProcessingTimeline from '../components/ProcessingTimeline.jsx';
 import ReviewEditor from '../components/ReviewEditor.jsx';
+import ReviewHistory from '../components/ReviewHistory.jsx';
 import ReviewQueue from '../components/ReviewQueue.jsx';
 import { request } from '../services/api.js';
 
@@ -274,9 +275,15 @@ const LandingPage = () => {
                           : 'This category does not continue to document comparison.'}
                       </p>}
                   <ProcessingTimeline events={selectedEmail.timeline} />
-                  {reviews.find((review) => review.emailId === selectedEmail.emailId) && (
+                  <ReviewHistory
+                    review={selectedEmail.review}
+                    emailId={selectedEmail.emailId}
+                    runId={run.runId}
+                    onComplete={completeReview}
+                  />
+                  {selectedEmail.review?.status === 'open' && (
                     <ReviewEditor
-                      review={reviews.find((review) => review.emailId === selectedEmail.emailId)}
+                      review={selectedEmail.review}
                       email={selectedEmail}
                       onComplete={completeReview}
                     />
