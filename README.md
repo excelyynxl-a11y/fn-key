@@ -1,6 +1,6 @@
 # FN Key - MERN development environment
 
-Shared JavaScript development foundation for the team. It contains a minimal React page and Express API, with local MongoDB and hot reload. No application features or authentication are implemented. Existing hackathon documents and `sdoc-hackathon-bundle/` are reference material and are preserved.
+SDOC is an adaptive shipping-document verification application built on React, Express, and MongoDB. Stage 1 imports the 520-email challenge bundle, applies deterministic baseline classification, parses plain-text SI/BL pairs, extracts and normalizes the seven required fields, compares them, records review reasons, and exports the exact submission JSON shape. The dashboard shows batch progress, inbox results, side-by-side values, and source-line evidence.
 
 ## Stack and prerequisites
 
@@ -18,13 +18,39 @@ cd <repository>
 docker compose up --build
 ```
 
-Defaults work immediately without an `.env` file. The first build downloads images and dependencies. MongoDB must become healthy before the API starts; the API must become healthy before the frontend starts.
+Create a root `.env` containing a reachable MongoDB URI before starting. The first build downloads images and dependencies. MongoDB must be reachable before the API starts; the API must become healthy before the frontend starts.
+
+```dotenv
+MONGO_URI=mongodb+srv://<user>:<password>@<cluster>/<database>
+# Required from Stage 2 onward, optional for the Stage 1 deterministic flow.
+OPENAI_API_KEY=
+```
 
 - Frontend: http://localhost:5173
-- Backend: http://localhost:5000 — `GET /` returns `{"message":"API is running"}`.
+- Backend: http://localhost:5000 — `GET /` returns the SDOC API identity envelope.
 - Readiness: http://localhost:5000/health — returns 200 when MongoDB is connected, otherwise 503.
 
-Host ports bind to loopback for local development. Container services use the Compose internal network; the backend connects to `mongodb:27017`, never `localhost`. Browser JavaScript uses the host API URL, because the browser cannot resolve Compose service names.
+Host ports bind to loopback for local development. The backend uses `MONGO_URI` to connect to MongoDB Atlas or another reachable MongoDB deployment. Browser JavaScript uses the host API URL, because the browser cannot resolve Compose service names. The challenge bundle is mounted read-only at `/data/sdoc` inside the API container.
+
+## Stage 1 workflow
+
+1. Open http://localhost:5173.
+2. Select **Start new run**.
+3. The API imports all bundle emails with idempotent upserts and processes them with a concurrency limit.
+4. Select an inbox row to inspect its classification, status, seven-field comparison, and line evidence.
+5. Download a completed run's exact submission object from `GET /api/runs/:runId/submission`.
+
+Implemented API paths:
+
+| Method | Path | Purpose |
+| --- | --- | --- |
+| `POST` | `/api/runs` | Start an asynchronous bundle run |
+| `GET` | `/api/runs` | List processing runs |
+| `GET` | `/api/runs/:runId` | Poll run progress |
+| `POST` | `/api/runs/:runId/retry` | Retry failed and review items |
+| `GET` | `/api/runs/:runId/submission` | Validate and export submission JSON |
+| `GET` | `/api/emails?runId=...` | List results for a run |
+| `GET` | `/api/emails/:emailId` | Inspect one complete result |
 
 ## Daily commands
 
@@ -37,6 +63,13 @@ docker compose logs                 # Show logs
 docker compose logs -f              # Follow logs
 docker compose ps                   # Show service health
 docker compose config --quiet       # Validate configuration
+```
+
+Run the focused Stage 1 checks from the repository root:
+
+```sh
+cd server && npm test
+cd ../client && npm run build
 ```
 
 Use Ctrl+C to stop an attached run. After Dockerfile or dependency changes, use `docker compose up --build`. Edit files under `client/src/` and `server/src/` on your host for hot reload; no rebuild is needed. Vite listens on `0.0.0.0`; polling is enabled for Docker Desktop mounts, and Nodemon polls the backend files.
@@ -55,36 +88,33 @@ This uses Tailwind 4: no separate Tailwind or PostCSS configuration file is need
 
 ## Environment variables
 
-Compose reads an optional root `.env` to override defaults in `docker-compose.yml` and explicitly passes variables to containers. To customize, copy `.env.example` to `.env` (`Copy-Item .env.example .env` in PowerShell or `cp .env.example .env` in a POSIX shell). The local `.env` is ignored by Git; commit only `.env.example`.
+Compose reads a root `.env` and explicitly passes configuration to containers. Keep the local `.env` untracked and never commit real credentials.
 
 | Variable | Default | Purpose |
 | --- | --- | --- |
 | `PORT` | `5000` | API container and host port |
 | `CLIENT_PORT` | `5173` | Frontend host port |
-| `MONGO_URI` | `mongodb://mongodb:27017/mern_database` | API database connection |
+| `MONGO_URI` | Required | MongoDB Atlas or other reachable MongoDB connection string |
 | `CLIENT_ORIGIN` | `http://localhost:5173` | Allowed browser origin for CORS |
 | `VITE_API_URL` | `http://localhost:5000` | API URL used by the browser |
 | `WATCH_USE_POLLING` | `true` | Vite polling for mounted files |
+| `OPENAI_API_KEY` | Empty | Reserved for the Stage 2 AI fallback |
+| `PROCESSING_CONCURRENCY` | `4` | Maximum emails processed concurrently |
+| `DATASET_PATH` | `/data/sdoc` in Compose | Read-only challenge bundle location |
 
 If changing `PORT`, also update `VITE_API_URL`. If changing `CLIENT_PORT`, update `CLIENT_ORIGIN`. Run `docker compose up -d` after changing root environment values so containers are recreated with the new settings. Vite exposes `VITE_` variables to the browser: never place secrets in them. The backend also supports dotenv for optional direct Node execution; Docker supplies its environment through Compose.
 
 ## MongoDB and persistence
 
-MongoDB listens on port 27017 only inside Docker; it is not published to the host. Data resides in the named `mongodb_data` volume (prefixed by the Compose project name). Normal restarts, rebuilds and `docker compose down` preserve it. MongoDB creates the database when the first data is written.
-
-```sh
-docker compose exec mongodb mongosh mern_database
-```
-
-For a deliberate full reset, `docker compose down -v` removes ALL project volumes, including database data and dependency caches. This is destructive; use normal `down` to keep data.
+Email records, processing runs, extracted fields, and comparison results are persisted through Mongoose. Dataset imports use `emailId` upserts, so rerunning the same source does not create duplicate email documents. MongoDB network access must allow the API host; if Atlas reports that no server can be reached, check its network access list and credentials.
 
 ## Structure
 
 ```text
 client/
   src/
-    components/          # Future shared UI
-    pages/               # Future pages
+    components/          # Run progress, inbox, status and comparison UI
+    pages/               # Stage 1 dashboard
     services/api.js      # Shared fetch helper
     App.jsx
     main.jsx
@@ -96,10 +126,14 @@ client/
 server/
   src/
     config/db.js
-    controllers/         # Future API controllers
+    constants/           # Challenge enums and pipeline version
+    controllers/         # Run and email APIs
     middleware/
-    models/
+    models/              # Email and ProcessingRun persistence
+    repositories/        # Safe dataset access
     routes/
+    schemas/             # Zod request/output contracts
+    services/            # Import, pipeline, comparison, run and export logic
     app.js
   server.js
   nodemon.json
@@ -107,7 +141,6 @@ server/
   package.json
   package-lock.json
 docker-compose.yml
-.env.example
 .gitignore
 README.md
 ```
@@ -118,7 +151,7 @@ Empty extension directories contain `.gitkeep` only. Both apps have `.dockerigno
 
 - **Cannot connect to Docker:** start Docker Desktop, wait for its engine and check `docker info`. Use Linux containers.
 - **Port already allocated:** stop the conflicting program or change the environment variables together as described above.
-- **API waiting or failing:** inspect `docker compose logs mongodb server`. The Docker MongoDB hostname must be `mongodb`. Check registry/network access if `npm ci` fails.
+- **API waiting or failing:** inspect `docker compose logs server`. Confirm that `MONGO_URI` is valid and the API host is allowed by MongoDB Atlas. Check registry/network access if `npm ci` fails.
 - **Changes not appearing:** check Docker Desktop file sharing and confirm the repository is the mounted folder. Polling is enabled by default. Environment changes require container recreation.
 - **Missing dependencies after switching branches:** restart the affected app with `docker compose restart client server`; startup `npm ci` resynchronizes dependencies. Rebuild if the image or Dockerfile changed.
 - **CORS errors:** `CLIENT_ORIGIN` must exactly match the browser's origin, including scheme and port. Use `localhost` consistently.

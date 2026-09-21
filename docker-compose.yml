@@ -9,8 +9,9 @@ services:
       PORT: ${PORT:-5000}
       MONGO_URI: ${MONGO_URI:?Set MONGO_URI in the root .env file (MongoDB Atlas)}
       CLIENT_ORIGIN: ${CLIENT_ORIGIN:-http://localhost:5173}
-      OPENAI_API_KEY: ${OPENAI_API_KEY:?Set OPENAI_API_KEY in the root .env file}
+      OPENAI_API_KEY: ${OPENAI_API_KEY:-}
       DATASET_PATH: /data/sdoc
+      PROCESSING_CONCURRENCY: ${PROCESSING_CONCURRENCY:-4}
     volumes:
       - ./server:/app
       - ./sdoc-hackathon-bundle:/data/sdoc:ro
