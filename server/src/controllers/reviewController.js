@@ -3,7 +3,7 @@ import { COMPARISON_FIELDS, EMAIL_CATEGORIES, REVIEW_REASONS } from '../constant
 import AuditEvent from '../models/AuditEvent.js';
 import Email from '../models/Email.js';
 import ReviewCase from '../models/ReviewCase.js';
-import { resolveReview, retryReviewedEmail } from '../services/reviewService.js';
+import { reopenReview, resolveReview, retryReviewedEmail } from '../services/reviewService.js';
 
 const listReviewSchema = z.object({
   runId: z.string().min(1),
@@ -29,6 +29,7 @@ const correctionsSchema = z.object({
 const resolveReviewSchema = z.object({
   action: z.enum(['confirm', 'correct']),
   preview: z.boolean().default(false),
+  expectedVersion: z.number().int().min(0),
   note: z.string().trim().min(3).max(2_000),
   reviewer: z.string().trim().min(1).max(200).default('operations-reviewer'),
   corrections: correctionsSchema.optional(),
@@ -46,6 +47,12 @@ const resolveReviewSchema = z.object({
     context.addIssue({ code: 'custom', path: ['knowledgeUpdate', 'phrase'], message: 'A phrase is required for a knowledge update' });
   }
 });
+
+const reopenReviewSchema = z.object({
+  expectedVersion: z.number().int().min(0),
+  reason: z.string().trim().min(3).max(2_000),
+  reviewer: z.string().trim().min(1).max(200).default('operations-reviewer')
+}).strict();
 
 const retrySchema = z.object({ runId: z.string().min(1) }).strict();
 
@@ -75,6 +82,13 @@ export async function resolveReviewController(req, res) {
   const outcome = await resolveReview(req.params.reviewId, input);
   if (!outcome) return res.status(404).json({ data: null, error: { code: 'REVIEW_NOT_FOUND', message: 'Review not found', retryable: false }, meta: {} });
   return res.json({ data: outcome, error: null, meta: { preview: input.preview } });
+}
+
+export async function reopenReviewController(req, res) {
+  const input = reopenReviewSchema.parse(req.body);
+  const review = await reopenReview(req.params.reviewId, input);
+  if (!review) return res.status(404).json({ data: null, error: { code: 'REVIEW_NOT_FOUND', message: 'Review not found', retryable: false }, meta: {} });
+  return res.json({ data: review, error: null, meta: {} });
 }
 
 export async function retryEmailController(req, res) {

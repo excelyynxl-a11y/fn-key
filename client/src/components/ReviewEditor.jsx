@@ -34,7 +34,7 @@ export default function ReviewEditor({ review, email, onComplete }) {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          action, preview: previewOnly, note,
+          action, preview: previewOnly, expectedVersion: review.__v, note,
           corrections: action === 'correct' ? corrections : undefined,
           knowledgeUpdate: action === 'correct' && learn ? { enabled: true, phrase: learningPhrase } : { enabled: false }
         })

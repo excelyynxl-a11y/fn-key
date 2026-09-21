@@ -18,6 +18,14 @@ export function reviewStageForReason(reviewReason) {
   })[reviewReason];
 }
 
+function reviewConflict(message = 'Review changed since it was loaded') {
+  const error = new Error(message);
+  error.code = 'REVIEW_CONFLICT';
+  error.statusCode = 409;
+  error.retryable = true;
+  return error;
+}
+
 export async function syncReviewCase({ runId, emailId, result }, reviewModel = ReviewCase) {
   const attempt = {
     at: new Date(),
@@ -32,7 +40,8 @@ export async function syncReviewCase({ runId, emailId, result }, reviewModel = R
           status: 'resolved', resolvedAt: new Date(),
           resolution: { action: 'reprocessed', nextResult: result }
         },
-        $push: { attempts: attempt }
+        $push: { attempts: attempt },
+        $inc: { __v: 1 }
       },
       { new: true }
     );
@@ -47,7 +56,8 @@ export async function syncReviewCase({ runId, emailId, result }, reviewModel = R
         status: 'open',
         resolvedAt: null
       },
-      $push: { attempts: attempt }
+      $push: { attempts: attempt },
+      $inc: { __v: 1 }
     },
     { upsert: true, new: true }
   );
@@ -106,17 +116,24 @@ export async function resolveReview(reviewId, input, {
 } = {}) {
   const review = await reviewModel.findOne({ reviewId }).lean();
   if (!review) return null;
+  if (review.__v !== input.expectedVersion) throw reviewConflict();
   const email = await emailModel.findOne({ emailId: review.emailId, lastRunId: review.runId }).lean({ flattenMaps: true });
   if (!email) return null;
 
   if (input.action === 'confirm') {
     if (!input.preview) {
-      await reviewModel.updateOne({ reviewId }, {
+      const updatedReview = await reviewModel.findOneAndUpdate({
+        reviewId,
+        __v: input.expectedVersion,
+        status: 'open'
+      }, {
         $set: {
           status: 'resolved', resolvedAt: new Date(),
           resolution: { action: 'confirm', note: input.note, reviewer: input.reviewer, previousResult: email.result }
-        }
-      });
+        },
+        $inc: { __v: 1 }
+      }, { new: true }).lean();
+      if (!updatedReview) throw reviewConflict();
       await auditModel.create({
         eventType: 'review.confirmed', entityType: 'review', entityId: reviewId,
         runId: review.runId, emailId: review.emailId,
@@ -131,6 +148,25 @@ export async function resolveReview(reviewId, input, {
   if (input.preview) return { review, preview: processed.result, processed };
 
   const reviewOverrides = mergeCorrections(email.reviewOverrides, input.corrections, input.note, input.reviewer);
+  const remainsOpen = processed.result.status === 'NEEDS_REVIEW';
+  const updatedReview = await reviewModel.findOneAndUpdate({
+    reviewId,
+    __v: input.expectedVersion,
+    status: 'open'
+  }, {
+    $set: {
+      status: remainsOpen ? 'open' : 'resolved',
+      resolvedAt: remainsOpen ? null : new Date(),
+      resolution: {
+        action: 'correct', note: input.note, reviewer: input.reviewer,
+        corrections: input.corrections, previousResult: email.result, nextResult: processed.result,
+        knowledgeUpdate: input.knowledgeUpdate ?? { enabled: false }
+      }
+    },
+    $inc: { __v: 1 }
+  }, { new: true }).lean();
+  if (!updatedReview) throw reviewConflict();
+
   let knowledgeOutcome = null;
   if (input.knowledgeUpdate?.enabled) {
     knowledgeOutcome = await learnClassificationPhrases({
@@ -152,18 +188,11 @@ export async function resolveReview(reviewId, input, {
   });
   const delta = outcomeCounterDelta(email.result?.status, processed.result.status);
   if (Object.keys(delta).length > 0) await runModel.updateOne({ runId: review.runId }, { $inc: delta });
-  const remainsOpen = processed.result.status === 'NEEDS_REVIEW';
-  await reviewModel.updateOne({ reviewId }, {
-    $set: {
-      status: remainsOpen ? 'open' : 'resolved',
-      resolvedAt: remainsOpen ? null : new Date(),
-      resolution: {
-        action: 'correct', note: input.note, reviewer: input.reviewer,
-        corrections: input.corrections, previousResult: email.result, nextResult: processed.result,
-        knowledgeUpdate: input.knowledgeUpdate ?? { enabled: false }, knowledgeOutcome
-      }
-    }
-  });
+  if (knowledgeOutcome) {
+    await reviewModel.updateOne({ reviewId, __v: updatedReview.__v }, {
+      $set: { 'resolution.knowledgeOutcome': knowledgeOutcome }
+    });
+  }
   await auditModel.create({
     eventType: 'review.corrected', entityType: 'review', entityId: reviewId,
     runId: review.runId, emailId: review.emailId,
@@ -173,6 +202,31 @@ export async function resolveReview(reviewId, input, {
     }
   });
   return { review, preview: processed.result, processed };
+}
+
+export async function reopenReview(reviewId, input, {
+  reviewModel = ReviewCase,
+  auditModel = AuditEvent
+} = {}) {
+  const review = await reviewModel.findOne({ reviewId }).lean();
+  if (!review) return null;
+  if (review.__v !== input.expectedVersion) throw reviewConflict();
+  if (review.status !== 'resolved') throw reviewConflict('Only a resolved review can be reopened');
+  const reopened = await reviewModel.findOneAndUpdate({
+    reviewId,
+    __v: input.expectedVersion,
+    status: 'resolved'
+  }, {
+    $set: { status: 'open', resolvedAt: null },
+    $inc: { __v: 1 }
+  }, { new: true }).lean();
+  if (!reopened) throw reviewConflict();
+  await auditModel.create({
+    eventType: 'review.reopened', entityType: 'review', entityId: reviewId,
+    runId: review.runId, emailId: review.emailId,
+    details: { reason: input.reason, reviewer: input.reviewer, previousResolution: review.resolution }
+  });
+  return reopened;
 }
 
 export async function retryReviewedEmail(emailId, runId, options = {}) {

@@ -5,7 +5,13 @@ import { createDatasetRepository } from '../src/repositories/datasetRepository.j
 import { applyHumanFieldOverrides, rolesFromHumanOverride } from '../src/services/pipelineService.js';
 import { processEmail } from '../src/services/pipelineService.js';
 import { normalizePhrase } from '../src/services/phraseKnowledgeService.js';
-import { outcomeCounterDelta, resolveReview, reviewStageForReason, syncReviewCase } from '../src/services/reviewService.js';
+import {
+  outcomeCounterDelta,
+  reopenReview,
+  resolveReview,
+  reviewStageForReason,
+  syncReviewCase
+} from '../src/services/reviewService.js';
 
 const repository = createDatasetRepository(path.resolve(process.cwd(), '..', 'sdoc-hackathon-bundle'));
 
@@ -60,6 +66,7 @@ test('upserts an open review case with an immutable processing attempt', async (
   assert.deepEqual(call.filter, { runId: 'run-1', emailId: 'email_001' });
   assert.equal(call.update.$set.stage, 'field');
   assert.equal(call.update.$set.status, 'open');
+  assert.equal(call.update.$inc.__v, 1);
   assert.equal(call.options.upsert, true);
 });
 
@@ -75,6 +82,7 @@ test('closes an open review automatically when reprocessing resolves it', async 
   assert.deepEqual(call.filter, { runId: 'run-1', emailId: 'email_001', status: 'open' });
   assert.equal(call.update.$set.status, 'resolved');
   assert.equal(call.update.$set.resolution.action, 'reprocessed');
+  assert.equal(call.update.$inc.__v, 1);
 });
 
 test('resolving a missing value reruns comparison without changing raw source', async () => {
@@ -104,11 +112,16 @@ test('resolving a missing value reruns comparison without changing raw source', 
     async updateOne(filter, update) { emailWrite = { filter, update }; }
   };
   const reviewModel = {
-    findOne: () => query({ reviewId: 'review-1', runId: 'run-1', emailId: source.email_id }),
+    findOne: () => query({
+      reviewId: 'review-1', runId: 'run-1', emailId: source.email_id,
+      status: 'open', __v: 0
+    }),
+    findOneAndUpdate: (_filter, _update) => query({ reviewId: 'review-1', status: 'resolved', __v: 1 }),
     async updateOne() {}
   };
   const result = await resolveReview('review-1', {
-    action: 'correct', preview: false, note: 'Confirmed against the signed SI', reviewer: 'tester',
+    action: 'correct', preview: false, expectedVersion: 0,
+    note: 'Confirmed against the signed SI', reviewer: 'tester',
     corrections: { fields: [{ documentType: 'SI', field: 'gross_weight_kg', rawValue: '235,550 KG' }] }
   }, {
     reviewModel,
@@ -121,4 +134,39 @@ test('resolving a missing value reruns comparison without changing raw source', 
   assert.equal(result.processed.result.status, 'OK');
   assert.equal(emailWrite.update.$set.reviewOverrides.fields[0].rawValue, '235,550 KG');
   assert.equal(persistedEmail.source.body, source.body);
+});
+
+test('rejects a stale review update before reprocessing', async () => {
+  await assert.rejects(resolveReview('review-1', {
+    action: 'confirm', preview: false, expectedVersion: 2,
+    note: 'Confirm the current evidence', reviewer: 'tester'
+  }, {
+    reviewModel: { findOne: () => query({ reviewId: 'review-1', __v: 3 }) },
+    emailModel: { findOne() { throw new Error('email lookup should not run'); } }
+  }), (error) => error.code === 'REVIEW_CONFLICT' && error.statusCode === 409);
+});
+
+test('reopens a resolved review with an audited optimistic update', async () => {
+  let updateCall;
+  const events = [];
+  const review = {
+    reviewId: 'review-1', runId: 'run-1', emailId: 'email_001',
+    status: 'resolved', __v: 4, resolution: { action: 'confirm' }
+  };
+  const reopened = await reopenReview('review-1', {
+    expectedVersion: 4, reason: 'New source document received', reviewer: 'tester'
+  }, {
+    reviewModel: {
+      findOne: () => query(review),
+      findOneAndUpdate(filter, update, options) {
+        updateCall = { filter, update, options };
+        return query({ ...review, status: 'open', resolvedAt: null, __v: 5 });
+      }
+    },
+    auditModel: { async create(event) { events.push(event); } }
+  });
+  assert.equal(reopened.status, 'open');
+  assert.deepEqual(updateCall.filter, { reviewId: 'review-1', __v: 4, status: 'resolved' });
+  assert.equal(updateCall.update.$inc.__v, 1);
+  assert.equal(events[0].eventType, 'review.reopened');
 });
