@@ -1,6 +1,6 @@
 # FN Key - MERN development environment
 
-SDOC is an adaptive shipping-document verification application built on React, Express, and MongoDB. Stage 2 imports the 520-email challenge bundle, scores versioned category phrases, sends only uncertain cases through a strict structured AI fallback, safely learns probation phrases, and caches validated AI decisions. The existing document flow parses plain-text SI/BL pairs, compares the seven required fields, records review reasons, and exports the exact submission JSON shape.
+SDOC is an adaptive shipping-document verification application built on React, Express, and MongoDB. Stage 3 imports the 520-email challenge bundle, classifies messages, parses TXT/PDF/DOCX/XLSX attachments, identifies one shipping instruction and one bill of lading, extracts seven traceable fields, and makes the final comparison in deterministic code. Structured AI or vision is used only for unresolved classifications, document roles, or fields; validated results are cached and never directly choose the final status.
 
 ## Stack and prerequisites
 
@@ -22,7 +22,7 @@ Create a root `.env` containing a reachable MongoDB URI before starting. The fir
 
 ```dotenv
 MONGO_URI=mongodb+srv://<user>:<password>@<cluster>/<database>
-# Required when a message falls below the deterministic classification thresholds.
+# Required only when a classification, document role, or field needs AI fallback.
 OPENAI_API_KEY=
 OPENAI_MODEL=gpt-5.5
 ```
@@ -33,15 +33,23 @@ OPENAI_MODEL=gpt-5.5
 
 Host ports bind to loopback for local development. The backend uses `MONGO_URI` to connect to MongoDB Atlas or another reachable MongoDB deployment. Browser JavaScript uses the host API URL, because the browser cannot resolve Compose service names. The challenge bundle is mounted read-only at `/data/sdoc` inside the API container.
 
-## Stage 2 workflow
+## Stage 3 workflow
 
 1. Open http://localhost:5173.
 2. Select **Start new run**.
-3. The API seeds the phrase knowledge base idempotently, scores every email, and uses the structured AI fallback only when the score or lead is insufficient.
-4. Select an inbox row to inspect category scores, matched phrases, confidence, decision method, status, and comparison evidence.
+3. The API classifies each message, parses supported attachment formats, resolves SI/BL roles, and extracts and normalizes the seven comparison fields.
+4. Select an inbox row to inspect classification evidence, parser outcomes, field values, page/sheet/cell/line evidence, extraction method, confidence, and final status.
 5. Download a completed run's exact submission object from `GET /api/runs/:runId/submission`.
 
-AI evidence must occur verbatim in the email. New phrases are rejected when they are generic, sensitive, shipment-specific, too long, or conflicting; accepted phrases begin in low-weight probation. Repeated runs reuse the hash cache and do not count the same email twice as independent phrase support.
+AI evidence must occur verbatim in the source text whenever embedded text is available. New classification phrases are rejected when they are generic, sensitive, shipment-specific, too long, or conflicting; accepted phrases begin in low-weight probation. Document AI requests contain only unresolved roles or fields, use strict schemas, and are cached by source hash, model, prompt, schema, and requested fields. Scanned evidence that cannot be verified locally remains `NEEDS_REVIEW`.
+
+Supported attachment handling:
+
+- TXT preserves line numbers and detects invalid UTF-8 replacement characters.
+- PDF extracts embedded text by page, detects sparse/scanned content, and enforces a page limit.
+- DOCX preserves paragraph and table-cell reading order.
+- XLSX inspects all non-empty sheets and preserves sheet/cell relationships.
+- File signatures are checked independently of extensions; unsupported, corrupt, encrypted, empty, and scanned outcomes remain distinguishable.
 
 Implemented API paths:
 
@@ -102,7 +110,7 @@ Compose reads a root `.env` and explicitly passes configuration to containers. K
 | `CLIENT_ORIGIN` | `http://localhost:5173` | Allowed browser origin for CORS |
 | `VITE_API_URL` | `http://localhost:5000` | API URL used by the browser |
 | `WATCH_USE_POLLING` | `true` | Vite polling for mounted files |
-| `OPENAI_API_KEY` | Empty | Used only for uncertain email classifications |
+| `OPENAI_API_KEY` | Empty | Used only for uncertain classifications, document roles, or fields |
 | `OPENAI_MODEL` | `gpt-5.5` | Configurable Responses API model |
 | `OPENAI_MAX_ATTEMPTS` | `3` | Maximum structured-AI attempts for transient failures |
 | `OPENAI_TIMEOUT_MS` | `20000` | Timeout per AI attempt in milliseconds |
@@ -123,7 +131,7 @@ Email records, processing runs, extracted fields, and comparison results are per
 client/
   src/
     components/          # Run progress, inbox, status and comparison UI
-    pages/               # Stage 2 dashboard
+    pages/               # Stage 3 dashboard
     services/api.js      # Shared fetch helper
     App.jsx
     main.jsx
@@ -142,7 +150,7 @@ server/
     repositories/        # Safe dataset access
     routes/
     schemas/             # Zod request/output contracts
-    services/            # Import, adaptive classification, learning, comparison, run and export logic
+    services/            # Import, parsers, adaptive AI fallbacks, extraction, comparison, run and export logic
     app.js
   server.js
   nodemon.json

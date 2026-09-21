@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState } from 'react';
 import EmailTable from '../components/EmailTable.jsx';
+import AttachmentSummary from '../components/AttachmentSummary.jsx';
 import ClassificationEvidence from '../components/ClassificationEvidence.jsx';
 import FieldComparisonTable from '../components/FieldComparisonTable.jsx';
 import RunProgress from '../components/RunProgress.jsx';
@@ -136,9 +137,16 @@ const LandingPage = () => {
                     {selectedEmail.result?.reviewReason && <span> · {selectedEmail.result.reviewReason.replaceAll('_', ' ')}</span>}
                   </div>
                   <ClassificationEvidence classification={selectedEmail.classification} />
+                  {selectedEmail.result?.category === 'BL_COMPARISON' && (
+                    <AttachmentSummary attachments={selectedEmail.source?.attachments} />
+                  )}
                   {selectedEmail.result?.category === 'BL_COMPARISON' && selectedEmail.documents?.si?.fields
                     ? <div className="mt-5"><FieldComparisonTable email={selectedEmail} /></div>
-                    : <p className="mt-6 text-sm text-slate-500">This category does not continue to document comparison.</p>}
+                    : <p className="mt-6 text-sm text-slate-500">
+                        {selectedEmail.result?.category === 'BL_COMPARISON'
+                          ? 'Field comparison stopped at the review reason shown above.'
+                          : 'This category does not continue to document comparison.'}
+                      </p>}
                 </>
               ) : <p className="text-sm text-slate-500">Select an email to inspect it.</p>}
             </section>

@@ -10,10 +10,19 @@ const fields = [
 
 function FieldValue({ field }) {
   if (!field?.rawValue) return <span className="text-amber-700">Missing</span>;
+  const location = [
+    field.location?.page ? `page ${field.location.page}` : null,
+    field.location?.sheet ? `sheet ${field.location.sheet}` : null,
+    field.location?.cell ? `cell ${field.location.cell}` : null,
+    field.location?.line ? `line ${field.location.line}` : null
+  ].filter(Boolean).join(' · ') || 'location unavailable';
   return (
     <div>
       <p className="font-medium text-slate-900">{field.rawValue}</p>
-      <p className="mt-1 text-xs text-slate-500">{field.evidence} · line {field.location?.line ?? '-'}</p>
+      <p className="mt-1 text-xs text-slate-500">{field.evidence} · {location}</p>
+      <p className="mt-1 text-[11px] uppercase tracking-wide text-slate-400">
+        {field.method === 'ai' ? 'AI fallback' : 'Deterministic extraction'} · {Math.round((field.confidence ?? 0) * 100)}%
+      </p>
     </div>
   );
 }

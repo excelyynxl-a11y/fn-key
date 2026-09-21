@@ -1,0 +1,35 @@
+function outcomeClass(attachment) {
+  if (attachment.exists === false || ['unreadable', 'unsupported'].includes(attachment.parserStatus)) {
+    return 'border-rose-200 bg-rose-50 text-rose-700';
+  }
+  if (attachment.scanned || attachment.parserWarnings?.length) {
+    return 'border-amber-200 bg-amber-50 text-amber-800';
+  }
+  return 'border-slate-200 bg-slate-50 text-slate-700';
+}
+
+export default function AttachmentSummary({ attachments = [] }) {
+  if (attachments.length === 0) return null;
+  return (
+    <div className="mt-5">
+      <h3 className="text-sm font-semibold text-slate-900">Attachment processing</h3>
+      <div className="mt-2 grid gap-2 sm:grid-cols-2">
+        {attachments.map((attachment) => (
+          <div key={attachment.reference} className={`rounded-xl border p-3 text-xs ${outcomeClass(attachment)}`}>
+            <p className="truncate font-semibold" title={attachment.filename}>{attachment.filename}</p>
+            <p className="mt-1 uppercase tracking-wide">
+              {attachment.detectedFormat ?? attachment.extension?.replace('.', '') ?? 'unknown format'}
+              {' · '}{attachment.exists === false ? 'missing' : attachment.parserStatus ?? 'not parsed'}
+              {attachment.documentType && attachment.documentType !== 'UNKNOWN' ? ` · ${attachment.documentType}` : ''}
+            </p>
+            {attachment.roleMethod && <p className="mt-1">Role identified by {attachment.roleMethod}</p>}
+            {attachment.parserError?.message && <p className="mt-1">{attachment.parserError.message}</p>}
+            {!attachment.parserError?.message && attachment.parserWarnings?.[0] && (
+              <p className="mt-1">{attachment.parserWarnings[0]}</p>
+            )}
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}

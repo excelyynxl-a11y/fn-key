@@ -9,15 +9,16 @@ const Sidebar = () => {
         </div>
       </div>
       <div className="mt-8 rounded-2xl border border-slate-800 bg-slate-900 p-4">
-        <p className="text-xs font-semibold uppercase tracking-[0.16em] text-blue-400">Stage 2</p>
+        <p className="text-xs font-semibold uppercase tracking-[0.16em] text-blue-400">Stage 3</p>
         <p className="mt-2 text-sm leading-6 text-slate-300">
-          Weighted phrase classification with structured AI fallback, safe learning, and source evidence.
+          Multi-format SI/BL parsing, traceable seven-field extraction, and deterministic comparison.
         </p>
       </div>
       <ul className="mt-6 space-y-2 text-sm text-slate-300">
         <li className="rounded-xl bg-slate-800 px-4 py-3 font-medium text-white">Run dashboard</li>
         <li className="px-4 py-2">Deterministic-first scoring</li>
-        <li className="px-4 py-2">Validated AI fallback</li>
+        <li className="px-4 py-2">TXT · PDF · DOCX · XLSX</li>
+        <li className="px-4 py-2">Validated AI/vision fallback</li>
         <li className="px-4 py-2">7 required fields</li>
         <li className="px-4 py-2">Exact JSON export</li>
       </ul>
