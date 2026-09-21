@@ -21,7 +21,7 @@ test('serves the API identity envelope', async () => {
     const response = await fetch(`${baseUrl}/`);
     assert.equal(response.status, 200);
     const body = await response.json();
-    assert.equal(body.data.service, 'sdoc-api');
+    assert.equal(body.data.service, 'shipmail-api');
     assert.equal(body.error, null);
     assert.match(body.meta.requestId, /^[0-9a-f-]{36}$/);
     assert.equal(response.headers.get('x-content-type-options'), 'nosniff');
@@ -75,13 +75,13 @@ test('returns a consistent not-found envelope', async () => {
 });
 
 test('serves the production client and preserves API 404 responses', async () => {
-  const clientDistPath = await mkdtemp(path.join(os.tmpdir(), 'sdoc-client-'));
-  await writeFile(path.join(clientDistPath, 'index.html'), '<!doctype html><title>SDOC</title><div id="root"></div>');
+  const clientDistPath = await mkdtemp(path.join(os.tmpdir(), 'shipmail-client-'));
+  await writeFile(path.join(clientDistPath, 'index.html'), '<!doctype html><title>Shipmail</title><div id="root"></div>');
   try {
     await withServer(async (baseUrl) => {
       const pageResponse = await fetch(`${baseUrl}/inbox`);
       assert.equal(pageResponse.status, 200);
-      assert.match(await pageResponse.text(), /<title>SDOC<\/title>/);
+      assert.match(await pageResponse.text(), /<title>Shipmail<\/title>/);
 
       const apiResponse = await fetch(`${baseUrl}/api/unknown`);
       assert.equal(apiResponse.status, 404);

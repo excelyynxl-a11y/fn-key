@@ -1,4 +1,4 @@
-# SDOC Adaptive Shipping Document Verification - Implementation Plan
+# Shipmail Adaptive Shipping Document Verification - Implementation Plan
 
 ## 1. Purpose and source of truth
 
@@ -7,7 +7,7 @@ This plan turns the product direction in `IDEA.md` and `PRD.md` into an implemen
 Source priority for implementation decisions:
 
 1. The team's agreed product direction in `IDEA.md`.
-2. The required behavior and output contract in `PRD.md`, the problem statement, and `sdoc-hackathon-bundle/sample_submission.json`.
+2. The required behavior and output contract in `PRD.md`, the problem statement, and `shipmail-hackathon-bundle/sample_submission.json`.
 3. Hackathon rules, deadline, submission components, and judging criteria.
 4. The recommendations and trade-offs in this implementation plan.
 
@@ -290,7 +290,7 @@ Acceptance criteria:
 Tasks:
 
 - Implement `datasetRepository.js` against the local bundle first.
-- Prevent path traversal: resolve every attachment path and verify that it remains inside `sdoc-hackathon-bundle`.
+- Prevent path traversal: resolve every attachment path and verify that it remains inside `shipmail-hackathon-bundle`.
 - Validate each JSON record and referenced attachment before processing.
 - Upsert emails by `emailId`; store a content hash so reruns do not duplicate records.
 - Record missing references as input facts rather than throwing away the entire run.

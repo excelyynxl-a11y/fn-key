@@ -1,4 +1,4 @@
-# SDOC presentation outline
+# Shipmail presentation outline
 
 ## 1. The operational problem
 
@@ -6,7 +6,7 @@ Shipping teams receive mixed email categories and inconsistent SI/BL formats. Ma
 
 ## 2. The solution
 
-SDOC processes a batch into five categories, resolves SI/BL document roles, extracts seven required fields, and produces `OK`, `MISMATCH`, or an explicit `NEEDS_REVIEW` reason.
+Shipmail processes a batch into five categories, resolves SI/BL document roles, extracts seven required fields, and produces `OK`, `MISMATCH`, or an explicit `NEEDS_REVIEW` reason.
 
 ## 3. Architecture
 

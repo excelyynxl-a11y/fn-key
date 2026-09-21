@@ -5,7 +5,7 @@ import { createDatasetRepository } from '../src/repositories/datasetRepository.j
 import { normalizeGrossWeightKg } from '../src/services/normalizationService.js';
 import { processEmail } from '../src/services/pipelineService.js';
 
-const datasetPath = path.resolve(process.cwd(), '..', 'sdoc-hackathon-bundle');
+const datasetPath = path.resolve(process.cwd(), '..', 'shipmail-hackathon-bundle');
 const repository = createDatasetRepository(datasetPath);
 
 async function loadEmail(emailId) {

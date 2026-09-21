@@ -41,7 +41,7 @@ cd server
 npm test
 npm run evaluate:classification
 npm run submission:export -- <runId> submission.json http://localhost:5000
-npm run submission:validate -- submission.json ../sdoc-hackathon-bundle
+npm run submission:validate -- submission.json ../shipmail-hackathon-bundle
 npm audit --omit=dev
 cd ../client
 npm run build

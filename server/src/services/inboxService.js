@@ -6,7 +6,7 @@ import { createDatasetRepository } from '../repositories/datasetRepository.js';
 export function defaultDatasetPath() {
   return process.env.DATASET_PATH
     ? path.resolve(process.env.DATASET_PATH)
-    : path.resolve(process.cwd(), '..', 'sdoc-hackathon-bundle');
+    : path.resolve(process.cwd(), '..', 'shipmail-hackathon-bundle');
 }
 
 export async function importDataset({

@@ -2,7 +2,7 @@
 
 ## 0:00–0:25 — Problem and product
 
-Introduce SDOC as an operations tool that classifies shipping email, identifies SI and BL documents, compares seven required fields, and exposes uncertainty instead of hiding it.
+Introduce Shipmail as an operations tool that classifies shipping email, identifies SI and BL documents, compares seven required fields, and exposes uncertainty instead of hiding it.
 
 ## 0:25–0:55 — Architecture
 
@@ -24,7 +24,7 @@ State the measured limitation plainly: exact learned phrases do not yet generali
 
 ## 4:10–4:45 — Validate output
 
-Export the JSON, run `npm run submission:validate -- submission.json ../sdoc-hackathon-bundle`, and show 520 expected and 520 actual IDs with schema validity.
+Export the JSON, run `npm run submission:validate -- submission.json ../shipmail-hackathon-bundle`, and show 520 expected and 520 actual IDs with schema validity.
 
 ## 4:45–5:00 — Close
 

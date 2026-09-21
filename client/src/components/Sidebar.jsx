@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import { BookOpen, LayoutDashboard, PanelLeftClose, PanelLeftOpen } from 'lucide-react'
 
-const storageKey = 'sdoc.sidebar.collapsed'
+const storageKey = 'shipmail.sidebar.collapsed'
 
 const navigation = [
   { id: 'dashboard', label: 'Processing dashboard', icon: LayoutDashboard },
@@ -27,7 +27,7 @@ const Sidebar = ({ activeView, onNavigate }) => {
         <div className="grid size-11 shrink-0 place-items-center rounded-2xl bg-gradient-to-br from-blue-500 to-sky-400 font-bold text-white shadow-md shadow-blue-200">S</div>
         {!collapsed && (
           <div className="min-w-0">
-            <p className="font-semibold text-slate-950">SDOC</p>
+            <p className="font-semibold text-slate-950">Shipmail</p>
             <p className="text-xs text-slate-500">Document verification</p>
           </div>
         )}

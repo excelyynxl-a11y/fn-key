@@ -3,7 +3,7 @@ import path from 'node:path';
 import { createDatasetRepository } from '../repositories/datasetRepository.js';
 import { validateSubmissionArtifact } from '../services/submissionService.js';
 
-const [submissionArgument, datasetArgument = process.env.DATASET_PATH ?? path.resolve(process.cwd(), '..', 'sdoc-hackathon-bundle')] = process.argv.slice(2);
+const [submissionArgument, datasetArgument = process.env.DATASET_PATH ?? path.resolve(process.cwd(), '..', 'shipmail-hackathon-bundle')] = process.argv.slice(2);
 if (!submissionArgument) {
   console.error('Usage: npm run submission:validate -- <submission.json> [datasetPath]');
   process.exit(1);
