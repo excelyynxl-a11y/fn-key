@@ -1,8 +1,16 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { LayoutDashboard, PanelLeftClose, PanelLeftOpen } from 'lucide-react'
 
+const storageKey = 'sdoc.sidebar.collapsed'
+
 const Sidebar = () => {
-  const [collapsed, setCollapsed] = useState(false)
+  const [collapsed, setCollapsed] = useState(() => (
+    window.localStorage.getItem(storageKey) === 'true'
+  ))
+
+  useEffect(() => {
+    window.localStorage.setItem(storageKey, String(collapsed))
+  }, [collapsed])
 
   return (
     <aside
@@ -38,17 +46,19 @@ const Sidebar = () => {
         </div>
       )}
 
-      <ul className="mt-6 space-y-2 px-3 text-sm text-blue-200/80 lg:px-4">
-        <li
-          title="Run dashboard"
-          className={`flex items-center rounded-md bg-blue-600/20 font-medium text-white ring-1 ring-blue-800 ${
-            collapsed ? 'justify-center px-0 py-3' : 'gap-2 px-4 py-3'
-          }`}
-        >
-          <LayoutDashboard className="size-4 shrink-0" />
-          {!collapsed && <span>Run dashboard</span>}
-        </li>
-      </ul>
+      <nav aria-label="Primary navigation">
+        <ul className="mt-6 space-y-2 px-3 text-sm text-blue-200/80 lg:px-4">
+          <li
+            title="Run dashboard"
+            className={`flex items-center rounded-md bg-blue-600/20 font-medium text-white ring-1 ring-blue-800 ${
+              collapsed ? 'justify-center px-0 py-3' : 'gap-2 px-4 py-3'
+            }`}
+          >
+            <LayoutDashboard className="size-4 shrink-0" />
+            {!collapsed && <span>Run dashboard</span>}
+          </li>
+        </ul>
+      </nav>
     </aside>
   )
 }
