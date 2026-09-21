@@ -8,17 +8,17 @@ The core design is **deterministic first, AI only when needed**. Auditable rules
 
 ## Submission at a glance
 
-| Area | Delivered result |
-| --- | --- |
-| Challenge coverage | Exact validation of all 520 expected email IDs |
-| Classification | Five required categories with explainable evidence and confidence gates |
-| Document verification | SI/BL role detection and deterministic comparison of seven required fields |
-| Input formats | TXT, PDF, DOCX, and XLSX with format-aware evidence locations |
-| Human oversight | Review queue, correction preview, retry/reopen flow, and immutable audit history |
-| Adaptive learning | Seed, probation, trusted, blocked, and retired phrase states with moderation controls |
-| Operational visibility | Coverage, fallback, cache, latency, token, estimated cost, and review metrics |
-| Verification evidence | 75/75 automated tests, 15/15 labelled classification cases, 520/520 output IDs |
-| Observed AI usage | $0.80 across 229,219 tokens and 557 API requests in the captured development window |
+| Area                   | Delivered result                                                                      |
+| ---------------------- | ------------------------------------------------------------------------------------- |
+| Challenge coverage     | Exact validation of all 520 expected email IDs                                        |
+| Classification         | Five required categories with explainable evidence and confidence gates               |
+| Document verification  | SI/BL role detection and deterministic comparison of seven required fields            |
+| Input formats          | TXT, PDF, DOCX, and XLSX with format-aware evidence locations                         |
+| Human oversight        | Review queue, correction preview, retry/reopen flow, and immutable audit history      |
+| Adaptive learning      | Seed, probation, trusted, blocked, and retired phrase states with moderation controls |
+| Operational visibility | Coverage, fallback, cache, latency, token, estimated cost, and review metrics         |
+| Verification evidence  | 75/75 automated tests, 15/15 labelled classification cases, 520/520 output IDs        |
+| Observed AI usage      | $0.80 across 229,219 tokens and 557 API requests in the captured development window   |
 
 ## Technical Architecture
 
@@ -55,7 +55,7 @@ The React client is an operations console rather than a black-box demo. It polls
 ### 1. Ingestion and orchestration
 
 - The dataset repository resolves paths inside the configured bundle root, rejects traversal, and imports records by stable `emailId` upserts.
-- Runs are asynchronous, concurrency-bounded, cancellable, retryable, and versioned with `5.0.0-stage-5` for reproducibility.
+- Runs are asynchronous, concurrency-bounded, cancellable, retryable, and versioned for reproducibility.
 - Submission export validates the schema and enforces exact, duplicate-free coverage of all 520 challenge IDs.
 
 ### 2. Adaptive email classification
@@ -85,26 +85,26 @@ The React client is an operations console rather than a black-box demo. It polls
 
 ## AI Usage and Cost Efficiency
 
-Real API telemetry is valuable submission evidence when its scope is stated honestly. The captured OpenAI dashboard covers a seven-day development window and shows **$0.80 spend, 229,219 tokens, and 557 requests**.
+Real API telemetry is valuable submission evidence when its scope is stated honestly. The captured OpenAI dashboard covers the development window and shows **$0.80 spend, 229,219 tokens, and 557 requests**.
 
 ![OpenAI API usage showing $0.80 spend, 229,219 tokens, and 557 requests](docs/assets/openai-api-usage.jpg)
 
 Derived from that observed aggregate:
 
-| Metric | Calculation | Observed value |
-| --- | --- | ---: |
-| Tokens per API request | 229,219 / 557 | 412 |
-| Cost per API request | $0.80 / 557 | $0.00144 |
-| Blended cost per 1M tokens | $0.80 / 229,219 × 1,000,000 | $3.49 |
+| Metric                     | Calculation                 | Observed value |
+| -------------------------- | --------------------------- | -------------: |
+| Tokens per API request     | 229,219 / 557               |            412 |
+| Cost per API request       | $0.80 / 557                 |       $0.00144 |
+| Blended cost per 1M tokens | $0.80 / 229,219 × 1,000,000 |          $3.49 |
 
 If the same request mix and blended rate scaled linearly, the reference scenarios would be:
 
 | API requests | Approx. tokens | Illustrative cost |
-| ---: | ---: | ---: |
-| 1,000 | 411,524 | $1.44 |
-| 10,000 | 4.12M | $14.36 |
-| 100,000 | 41.15M | $143.63 |
-| 1,000,000 | 411.52M | $1,436.27 |
+| -----------: | -------------: | ----------------: |
+|        1,000 |        411,524 |             $1.44 |
+|       10,000 |          4.12M |            $14.36 |
+|      100,000 |         41.15M |           $143.63 |
+|    1,000,000 |        411.52M |         $1,436.27 |
 
 As a secondary scenario, **only if** the 557 captured requests are treated as one representative 520-email pass, the implied rate is 1.07 API requests and $0.00154 per email—about **$153.85 per 100,000 emails** or **$1,538.46 per million emails**.
 
@@ -205,22 +205,22 @@ The root [`Dockerfile`](Dockerfile) is the production image. It builds the React
 
 Set these before the first deploy:
 
-| Variable | Required | Render value |
-| --- | --- | --- |
-| `MONGO_URI` | Yes | Full MongoDB Atlas SRV connection string, including the database name |
-| `CLIENT_ORIGIN` | Yes | Exact public origin, such as `https://sdoc-demo.onrender.com`; no trailing slash |
-| `OPENAI_API_KEY` | Recommended | OpenAI project API key; without it, unresolved AI fallbacks become review cases |
-| `OPENAI_MODEL` | Recommended | Model available to the API project; defaults to `gpt-5.5` |
-| `PROCESSING_CONCURRENCY` | Optional | `4`; use `2` on a memory-constrained instance |
-| `OPENAI_MAX_ATTEMPTS` | Optional | `3` |
-| `OPENAI_TIMEOUT_MS` | Optional | `20000` |
-| `API_RATE_LIMIT_MAXIMUM` | Optional | `300` |
-| `API_RATE_LIMIT_WINDOW_MS` | Optional | `60000` |
-| `JSON_BODY_LIMIT` | Optional | `1mb` |
-| `CLASSIFICATION_MIN_SCORE` | Optional | `4` |
-| `CLASSIFICATION_MIN_MARGIN` | Optional | `1.5` |
-| `OPENAI_INPUT_COST_PER_MILLION` | Optional | Current input-token price, or `0` to disable estimates |
-| `OPENAI_OUTPUT_COST_PER_MILLION` | Optional | Current output-token price, or `0` to disable estimates |
+| Variable                         | Required    | Render value                                                                     |
+| -------------------------------- | ----------- | -------------------------------------------------------------------------------- |
+| `MONGO_URI`                      | Yes         | Full MongoDB Atlas SRV connection string, including the database name            |
+| `CLIENT_ORIGIN`                  | Yes         | Exact public origin, such as `https://sdoc-demo.onrender.com`; no trailing slash |
+| `OPENAI_API_KEY`                 | Recommended | OpenAI project API key; without it, unresolved AI fallbacks become review cases  |
+| `OPENAI_MODEL`                   | Recommended | Model available to the API project; defaults to `gpt-5.5`                        |
+| `PROCESSING_CONCURRENCY`         | Optional    | `4`; use `2` on a memory-constrained instance                                    |
+| `OPENAI_MAX_ATTEMPTS`            | Optional    | `3`                                                                              |
+| `OPENAI_TIMEOUT_MS`              | Optional    | `20000`                                                                          |
+| `API_RATE_LIMIT_MAXIMUM`         | Optional    | `300`                                                                            |
+| `API_RATE_LIMIT_WINDOW_MS`       | Optional    | `60000`                                                                          |
+| `JSON_BODY_LIMIT`                | Optional    | `1mb`                                                                            |
+| `CLASSIFICATION_MIN_SCORE`       | Optional    | `4`                                                                              |
+| `CLASSIFICATION_MIN_MARGIN`      | Optional    | `1.5`                                                                            |
+| `OPENAI_INPUT_COST_PER_MILLION`  | Optional    | Current input-token price, or `0` to disable estimates                           |
+| `OPENAI_OUTPUT_COST_PER_MILLION` | Optional    | Current output-token price, or `0` to disable estimates                          |
 
 Do **not** set `PORT`: Render injects it and the server already binds it on `0.0.0.0`. Do not set `VITE_API_URL`, `DATASET_PATH`, `CLIENT_DIST_PATH`, or `NODE_ENV` for this deployment; the production image supplies the correct same-origin and internal-path configuration. Never put the OpenAI or MongoDB secret into a `VITE_` variable.
 
@@ -261,23 +261,23 @@ Supported attachment handling:
 
 Implemented API paths:
 
-| Method | Path | Purpose |
-| --- | --- | --- |
-| `POST` | `/api/runs` | Start an asynchronous bundle run |
-| `GET` | `/api/runs` | List processing runs |
-| `GET` | `/api/runs/:runId` | Poll run progress |
-| `POST` | `/api/runs/:runId/retry` | Retry failed and review items |
-| `POST` | `/api/runs/:runId/cancel` | Cooperatively stop an active run |
-| `GET` | `/api/runs/:runId/submission` | Validate and export submission JSON |
-| `POST` | `/api/runs/:runId/submission/validate` | Validate schema and exact email-ID coverage without downloading |
-| `GET` | `/api/runs/:runId/metrics` | Return coverage, AI, cache, latency, cost, and review metrics |
-| `GET` | `/api/emails?runId=...` | List results for a run |
-| `GET` | `/api/emails/:emailId` | Inspect one complete result |
-| `POST` | `/api/emails/:emailId/retry` | Reprocess one email with saved review overrides |
-| `GET/PATCH` | `/api/reviews[/:reviewId]` | List, inspect, preview, and resolve review cases with optimistic version checks |
-| `POST` | `/api/reviews/:reviewId/reopen` | Reopen a resolved review with a required reason and version check |
-| `GET/PATCH` | `/api/knowledge[/:id]` | Inspect and moderate adaptive knowledge |
-| `GET` | `/api/knowledge/audit` | Inspect immutable learning and moderation events |
+| Method      | Path                                   | Purpose                                                                         |
+| ----------- | -------------------------------------- | ------------------------------------------------------------------------------- |
+| `POST`      | `/api/runs`                            | Start an asynchronous bundle run                                                |
+| `GET`       | `/api/runs`                            | List processing runs                                                            |
+| `GET`       | `/api/runs/:runId`                     | Poll run progress                                                               |
+| `POST`      | `/api/runs/:runId/retry`               | Retry failed and review items                                                   |
+| `POST`      | `/api/runs/:runId/cancel`              | Cooperatively stop an active run                                                |
+| `GET`       | `/api/runs/:runId/submission`          | Validate and export submission JSON                                             |
+| `POST`      | `/api/runs/:runId/submission/validate` | Validate schema and exact email-ID coverage without downloading                 |
+| `GET`       | `/api/runs/:runId/metrics`             | Return coverage, AI, cache, latency, cost, and review metrics                   |
+| `GET`       | `/api/emails?runId=...`                | List results for a run                                                          |
+| `GET`       | `/api/emails/:emailId`                 | Inspect one complete result                                                     |
+| `POST`      | `/api/emails/:emailId/retry`           | Reprocess one email with saved review overrides                                 |
+| `GET/PATCH` | `/api/reviews[/:reviewId]`             | List, inspect, preview, and resolve review cases with optimistic version checks |
+| `POST`      | `/api/reviews/:reviewId/reopen`        | Reopen a resolved review with a required reason and version check               |
+| `GET/PATCH` | `/api/knowledge[/:id]`                 | Inspect and moderate adaptive knowledge                                         |
+| `GET`       | `/api/knowledge/audit`                 | Inspect immutable learning and moderation events                                |
 
 ## Daily commands
 
@@ -328,27 +328,27 @@ This uses Tailwind 4: no separate Tailwind or PostCSS configuration file is need
 
 Compose reads a root `.env` and explicitly passes configuration to containers. Keep the local `.env` untracked and never commit real credentials.
 
-| Variable | Default | Purpose |
-| --- | --- | --- |
-| `PORT` | `5000` | API container and host port |
-| `CLIENT_PORT` | `5173` | Frontend host port |
-| `MONGO_URI` | Required | MongoDB Atlas or other reachable MongoDB connection string |
-| `CLIENT_ORIGIN` | `http://localhost:5173` | Allowed browser origin for CORS |
-| `VITE_API_URL` | `http://localhost:5000` in Compose; same origin when omitted | Optional separate API URL used by the browser |
-| `WATCH_USE_POLLING` | `true` | Vite polling for mounted files |
-| `OPENAI_API_KEY` | Empty | Used only for uncertain classifications, document roles, or fields |
-| `OPENAI_MODEL` | `gpt-5.5` | Configurable Responses API model |
-| `OPENAI_MAX_ATTEMPTS` | `3` | Maximum structured-AI attempts for transient failures |
-| `OPENAI_TIMEOUT_MS` | `20000` | Timeout per AI attempt in milliseconds |
-| `JSON_BODY_LIMIT` | `1mb` | Maximum JSON request body accepted by Express |
-| `API_RATE_LIMIT_MAXIMUM` | `300` | Requests allowed per client within one rate-limit window |
-| `API_RATE_LIMIT_WINDOW_MS` | `60000` | Rate-limit window in milliseconds |
-| `OPENAI_INPUT_COST_PER_MILLION` | `0` | Optional input-token price used for estimated cost |
-| `OPENAI_OUTPUT_COST_PER_MILLION` | `0` | Optional output-token price used for estimated cost |
-| `CLASSIFICATION_MIN_SCORE` | `4` | Minimum deterministic winning score |
-| `CLASSIFICATION_MIN_MARGIN` | `1.5` | Minimum lead over the second category |
-| `PROCESSING_CONCURRENCY` | `4` | Maximum emails processed concurrently |
-| `DATASET_PATH` | `/data/sdoc` in Compose | Read-only challenge bundle location |
+| Variable                         | Default                                                      | Purpose                                                            |
+| -------------------------------- | ------------------------------------------------------------ | ------------------------------------------------------------------ |
+| `PORT`                           | `5000`                                                       | API container and host port                                        |
+| `CLIENT_PORT`                    | `5173`                                                       | Frontend host port                                                 |
+| `MONGO_URI`                      | Required                                                     | MongoDB Atlas or other reachable MongoDB connection string         |
+| `CLIENT_ORIGIN`                  | `http://localhost:5173`                                      | Allowed browser origin for CORS                                    |
+| `VITE_API_URL`                   | `http://localhost:5000` in Compose; same origin when omitted | Optional separate API URL used by the browser                      |
+| `WATCH_USE_POLLING`              | `true`                                                       | Vite polling for mounted files                                     |
+| `OPENAI_API_KEY`                 | Empty                                                        | Used only for uncertain classifications, document roles, or fields |
+| `OPENAI_MODEL`                   | `gpt-5.5`                                                    | Configurable Responses API model                                   |
+| `OPENAI_MAX_ATTEMPTS`            | `3`                                                          | Maximum structured-AI attempts for transient failures              |
+| `OPENAI_TIMEOUT_MS`              | `20000`                                                      | Timeout per AI attempt in milliseconds                             |
+| `JSON_BODY_LIMIT`                | `1mb`                                                        | Maximum JSON request body accepted by Express                      |
+| `API_RATE_LIMIT_MAXIMUM`         | `300`                                                        | Requests allowed per client within one rate-limit window           |
+| `API_RATE_LIMIT_WINDOW_MS`       | `60000`                                                      | Rate-limit window in milliseconds                                  |
+| `OPENAI_INPUT_COST_PER_MILLION`  | `0`                                                          | Optional input-token price used for estimated cost                 |
+| `OPENAI_OUTPUT_COST_PER_MILLION` | `0`                                                          | Optional output-token price used for estimated cost                |
+| `CLASSIFICATION_MIN_SCORE`       | `4`                                                          | Minimum deterministic winning score                                |
+| `CLASSIFICATION_MIN_MARGIN`      | `1.5`                                                        | Minimum lead over the second category                              |
+| `PROCESSING_CONCURRENCY`         | `4`                                                          | Maximum emails processed concurrently                              |
+| `DATASET_PATH`                   | `/data/sdoc` in Compose                                      | Read-only challenge bundle location                                |
 
 For the local Compose stack, if changing `PORT`, also update `VITE_API_URL`; if changing `CLIENT_PORT`, update `CLIENT_ORIGIN`. Run `docker compose up -d` after changing root environment values so containers are recreated with the new settings. Vite exposes `VITE_` variables to the browser: never place secrets in them. The backend also supports dotenv for optional direct Node execution; Docker supplies its environment through Compose.
 
