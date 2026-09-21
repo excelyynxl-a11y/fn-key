@@ -22,8 +22,11 @@ export default function RunProgress({ run }) {
         <span>{finished} of {total} emails</span>
         <span>{percentage}%</span>
       </div>
-      <dl className="mt-5 grid grid-cols-2 gap-3 sm:grid-cols-4">
+      <dl className="mt-5 grid grid-cols-2 gap-3 sm:grid-cols-3 xl:grid-cols-6">
         {[
+          ['Rule classified', counts.ruleClassified ?? 0],
+          ['AI classified', counts.aiClassified ?? 0],
+          ['AI cache hits', counts.aiCacheHits ?? 0],
           ['Compared', counts.compared ?? 0],
           ['Mismatches', counts.mismatched ?? 0],
           ['Needs review', counts.review ?? 0],
@@ -38,4 +41,3 @@ export default function RunProgress({ run }) {
     </section>
   );
 }
-

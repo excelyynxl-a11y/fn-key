@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState } from 'react';
 import EmailTable from '../components/EmailTable.jsx';
+import ClassificationEvidence from '../components/ClassificationEvidence.jsx';
 import FieldComparisonTable from '../components/FieldComparisonTable.jsx';
 import RunProgress from '../components/RunProgress.jsx';
 import Sidebar from '../components/Sidebar.jsx';
@@ -18,7 +19,7 @@ const LandingPage = () => {
     setEmails(response.data);
     const preferred = response.data.find((email) => email.emailId === 'email_004') ?? response.data[0];
     if (preferred) {
-      const detail = await request(`/api/emails/${preferred.emailId}`);
+      const detail = await request(`/api/emails/${preferred.emailId}?runId=${encodeURIComponent(runId)}`);
       setSelectedEmail(detail.data);
     }
   }, []);
@@ -76,7 +77,7 @@ const LandingPage = () => {
   async function selectEmail(emailId) {
     setError('');
     try {
-      const response = await request(`/api/emails/${emailId}`);
+      const response = await request(`/api/emails/${emailId}?runId=${encodeURIComponent(run.runId)}`);
       setSelectedEmail(response.data);
     } catch (selectError) {
       setError(selectError.message);
@@ -134,9 +135,10 @@ const LandingPage = () => {
                     {selectedEmail.result?.category?.replaceAll('_', ' ')} via {selectedEmail.classification?.method}
                     {selectedEmail.result?.reviewReason && <span> · {selectedEmail.result.reviewReason.replaceAll('_', ' ')}</span>}
                   </div>
+                  <ClassificationEvidence classification={selectedEmail.classification} />
                   {selectedEmail.result?.category === 'BL_COMPARISON' && selectedEmail.documents?.si?.fields
                     ? <div className="mt-5"><FieldComparisonTable email={selectedEmail} /></div>
-                    : <p className="mt-6 text-sm text-slate-500">This category does not continue to document comparison in Stage 1.</p>}
+                    : <p className="mt-6 text-sm text-slate-500">This category does not continue to document comparison.</p>}
                 </>
               ) : <p className="text-sm text-slate-500">Select an email to inspect it.</p>}
             </section>
