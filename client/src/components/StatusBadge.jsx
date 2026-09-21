@@ -30,9 +30,9 @@ export default function StatusBadge({ value }) {
   if (!value) return <span className="text-slate-400">Pending</span>;
   const Icon = icons[value] ?? CircleAlert;
   return (
-    <span className={`inline-flex items-center gap-1 rounded-lg border px-2.5 py-1 text-xs font-semibold ${styles[value] ?? 'border-sky-200 bg-sky-50 text-blue-700'}`}>
-      <Icon className={`size-3.5 ${['running', 'cancelling'].includes(value) ? 'animate-spin' : ''}`} aria-hidden="true" />
-      {value.replaceAll('_', ' ')}
+    <span className={`inline-flex max-w-full items-center gap-1 rounded-lg border px-2.5 py-1 text-xs font-semibold ${styles[value] ?? 'border-sky-200 bg-sky-50 text-blue-700'}`}>
+      <Icon className={`size-3.5 shrink-0 ${['running', 'cancelling'].includes(value) ? 'animate-spin' : ''}`} aria-hidden="true" />
+      <span className="min-w-0 break-words">{value.replaceAll('_', ' ')}</span>
     </span>
   );
 }

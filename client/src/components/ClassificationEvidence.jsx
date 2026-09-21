@@ -51,7 +51,7 @@ export default function ClassificationEvidence({ classification }) {
           const phrase = typeof evidence === 'string' ? evidence : evidence.phrase;
           const location = typeof evidence === 'string' ? null : evidence.location;
           return (
-            <span key={`${phrase}-${index}`} className="rounded-lg border border-sky-200 bg-white px-2.5 py-1.5 text-xs text-slate-600">
+            <span key={`${phrase}-${index}`} className="max-w-full break-words rounded-lg border border-sky-200 bg-white px-2.5 py-1.5 text-xs text-slate-600">
               “{phrase}”{location ? ` · ${location}` : ''}
             </span>
           );

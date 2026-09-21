@@ -204,7 +204,7 @@ const LandingPage = () => {
   return (
     <div className="min-h-screen lg:flex">
       <Sidebar activeView={activeView} onNavigate={setActiveView} />
-      <main className="min-w-0 flex-1 px-5 py-8 sm:px-8 lg:px-12 xl:px-14">
+      <main className="min-w-0 flex-1 overflow-x-hidden px-5 py-8 sm:px-8 lg:px-12 xl:px-14">
         <header className="flex flex-wrap items-center justify-between gap-4">
           <div>
             <p className="text-xs font-bold uppercase tracking-[0.2em] text-blue-600">{activeView === 'dashboard' ? 'Operations workspace' : 'Adaptive intelligence'}</p>
@@ -251,8 +251,8 @@ const LandingPage = () => {
         )}
 
         {run && terminalRunStates.includes(run.state) && (
-          <div className="mt-10 grid gap-8 xl:grid-cols-[minmax(0,1.35fr)_minmax(0,0.85fr)]">
-            <div className="space-y-5">
+          <div className="mt-10 grid min-w-0 gap-8 xl:grid-cols-[minmax(0,5fr)_minmax(0,7fr)]">
+            <div className="min-w-0 space-y-5">
               <InboxFilters
                 value={filterDraft}
                 onChange={setFilterDraft}
@@ -268,7 +268,7 @@ const LandingPage = () => {
                 onPage={(nextPage) => applyFilters(appliedFilters, nextPage)}
               />
             </div>
-            <section className="min-w-0 rounded-2xl border border-sky-100 bg-white p-6 shadow-sm shadow-sky-100/70 lg:p-8">
+            <section className="min-w-0 max-w-full overflow-x-hidden break-words rounded-2xl border border-sky-100 bg-white p-6 shadow-sm shadow-sky-100/70 lg:p-8">
               {selectedEmail ? (
                 <>
                   <div className="flex flex-wrap items-start justify-between gap-4">

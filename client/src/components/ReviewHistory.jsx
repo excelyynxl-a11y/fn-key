@@ -67,7 +67,7 @@ export default function ReviewHistory({ review, emailId, runId, onComplete }) {
           <button type="button" disabled={Boolean(busy)} onClick={() => act('retry')} className="inline-flex min-h-10 items-center gap-2 rounded-xl bg-blue-600 px-4 text-xs font-semibold text-white hover:bg-blue-700 disabled:opacity-40">
             <RotateCcw className={`size-3.5 ${busy === 'retry' ? 'animate-spin' : ''}`} /> {busy === 'retry' ? 'Retrying…' : 'Retry this email'}
           </button>
-          <input className="min-h-10 min-w-64 flex-1 rounded-xl border border-sky-200 bg-white px-3 text-xs text-slate-700" value={reason} onChange={(event) => setReason(event.target.value)} aria-label="Reason for reopening review" />
+          <input className="min-h-10 min-w-0 flex-1 rounded-xl border border-sky-200 bg-white px-3 text-xs text-slate-700" value={reason} onChange={(event) => setReason(event.target.value)} aria-label="Reason for reopening review" />
           <button type="button" disabled={Boolean(busy) || reason.trim().length < 3} onClick={() => act('reopen')} className="inline-flex min-h-10 items-center gap-2 rounded-xl border border-sky-200 bg-white px-4 text-xs font-semibold text-blue-700 hover:bg-sky-100 disabled:opacity-40">
             <FolderOpen className="size-3.5" /> {busy === 'reopen' ? 'Reopening…' : 'Reopen review'}
           </button>

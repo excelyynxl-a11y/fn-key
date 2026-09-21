@@ -9,7 +9,7 @@ export default function SourceEmailPanel({ source }) {
         <div><dt className="text-xs uppercase tracking-wide text-slate-400">Sender</dt><dd className="mt-1 break-all text-slate-700">{source.from}</dd></div>
         <div><dt className="text-xs uppercase tracking-wide text-slate-400">Subject</dt><dd className="mt-1 text-slate-700">{source.subject}</dd></div>
       </dl>
-      <pre className="mt-4 max-h-72 overflow-auto whitespace-pre-wrap rounded-xl border border-sky-100 bg-white p-4 font-sans text-sm leading-7 text-slate-600">{source.body || 'No body content'}</pre>
+      <pre className="mt-4 max-h-72 max-w-full overflow-x-hidden overflow-y-auto whitespace-pre-wrap break-words rounded-xl border border-sky-100 bg-white p-4 font-sans text-sm leading-7 text-slate-600 [overflow-wrap:anywhere]">{source.body || 'No body content'}</pre>
     </details>
   );
 }
