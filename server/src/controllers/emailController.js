@@ -1,26 +1,25 @@
 // EXAMPLE
 
-import { analyseEmail } from "../services/openaiService.js";
+import { parseTextFile } from '../services/fileParserService.js';
+import { analyseEmail } from '../services/openaiService.js';
 
 export async function analyseEmailController(req, res) {
-    try {
+  try {
+    const emailText = parseTextFile(req.file);
 
-        const emailText = req.body.email;
+    const result = await analyseEmail(emailText);
 
-        const result = await analyseEmail(emailText);
+    res.json({
+      success: true,
+      result
+    });
 
-        res.json({
-            success: true,
-            result
-        });
+  } catch (error) {
+    console.error(error);
 
-    } catch (error) {
-
-        console.error(error);
-
-        res.status(500).json({
-            success: false,
-            message: "Failed to analyse email"
-        });
-    }
+    res.status(500).json({
+      success: false,
+      message: 'Failed to analyse email'
+    });
+  }
 }
