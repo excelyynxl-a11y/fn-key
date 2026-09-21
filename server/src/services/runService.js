@@ -7,6 +7,7 @@ import { createDatasetRepository } from '../repositories/datasetRepository.js';
 import { defaultDatasetPath, importDataset } from './inboxService.js';
 import { loadActiveEmailPhrases, seedEmailCategoryPhrases } from './phraseKnowledgeService.js';
 import { processEmail } from './pipelineService.js';
+import { syncReviewCase } from './reviewService.js';
 
 const activeRuns = new Set();
 
@@ -58,6 +59,7 @@ async function processOneEmail(email, repository, runId, classificationOptions, 
       details: { retry }
     });
     const processed = await processEmail(email, repository, classificationOptions);
+    await syncReviewCase({ runId, emailId: email.emailId, result: processed.result });
     await AuditEvent.create({
       eventType: 'email.processing.completed',
       entityType: 'email',

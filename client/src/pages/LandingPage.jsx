@@ -9,6 +9,8 @@ import Sidebar from '../components/Sidebar.jsx';
 import SourceEmailPanel from '../components/SourceEmailPanel.jsx';
 import StatusBadge from '../components/StatusBadge.jsx';
 import ProcessingTimeline from '../components/ProcessingTimeline.jsx';
+import ReviewEditor from '../components/ReviewEditor.jsx';
+import ReviewQueue from '../components/ReviewQueue.jsx';
 import { request } from '../services/api.js';
 
 const LandingPage = () => {
@@ -21,6 +23,8 @@ const LandingPage = () => {
   const [page, setPage] = useState(1);
   const [retrying, setRetrying] = useState(false);
   const [offline, setOffline] = useState(false);
+  const [reviews, setReviews] = useState([]);
+  const [reviewMeta, setReviewMeta] = useState({ total: 0, grouped: {} });
   const [busy, setBusy] = useState(true);
   const [error, setError] = useState('');
 
@@ -41,13 +45,20 @@ const LandingPage = () => {
     setOffline(false);
   }, []);
 
+  const loadReviews = useCallback(async (runId) => {
+    const response = await request(`/api/reviews?runId=${encodeURIComponent(runId)}&status=open`);
+    setReviews(response.data);
+    setReviewMeta(response.meta);
+  }, []);
+
   const refreshRun = useCallback(async (runId) => {
     const response = await request(`/api/runs/${runId}`);
     setRun(response.data);
     if (['completed', 'completed_with_errors'].includes(response.data.state)) {
       await loadEmails(runId, appliedFilters, page);
+      await loadReviews(runId);
     }
-  }, [appliedFilters, loadEmails, page]);
+  }, [appliedFilters, loadEmails, loadReviews, page]);
 
   useEffect(() => {
     let cancelled = false;
@@ -57,6 +68,7 @@ const LandingPage = () => {
         setRun(response.data[0]);
         if (['completed', 'completed_with_errors'].includes(response.data[0].state)) {
           await loadEmails(response.data[0].runId, emptyInboxFilters, 1);
+          await loadReviews(response.data[0].runId);
         }
       })
       .catch((loadError) => {
@@ -67,7 +79,7 @@ const LandingPage = () => {
       })
       .finally(() => !cancelled && setBusy(false));
     return () => { cancelled = true; };
-  }, [loadEmails]);
+  }, [loadEmails, loadReviews]);
 
   useEffect(() => {
     if (!run || !['queued', 'running'].includes(run.state)) return undefined;
@@ -138,11 +150,20 @@ const LandingPage = () => {
       setRun(response.data);
       setEmails([]);
       setSelectedEmail(null);
+      setReviews([]);
     } catch (retryError) {
       setError(retryError.message);
     } finally {
       setRetrying(false);
     }
+  }
+
+  async function completeReview() {
+    const emailId = selectedEmail.emailId;
+    await Promise.all([loadReviews(run.runId), loadEmails(run.runId, appliedFilters, page)]);
+    await selectEmail(emailId);
+    const response = await request(`/api/runs/${run.runId}`);
+    setRun(response.data);
   }
 
   return (
@@ -174,6 +195,10 @@ const LandingPage = () => {
         {busy && !run && <p className="mt-10 text-sm text-slate-500">Loading workspace…</p>}
 
         {run && <div className="mt-8"><RunProgress run={run} onFilter={applySummaryFilter} onRetry={retryRun} retrying={retrying} /></div>}
+
+        {run && ['completed', 'completed_with_errors'].includes(run.state) && (
+          <div className="mt-4"><ReviewQueue reviews={reviews} grouped={reviewMeta.grouped} onSelect={selectEmail} selectedEmailId={selectedEmail?.emailId} /></div>
+        )}
 
         {!run && !busy && (
           <section className="mt-8 rounded-2xl border border-dashed border-slate-300 bg-white p-10 text-center">
@@ -229,6 +254,13 @@ const LandingPage = () => {
                           : 'This category does not continue to document comparison.'}
                       </p>}
                   <ProcessingTimeline events={selectedEmail.timeline} />
+                  {reviews.find((review) => review.emailId === selectedEmail.emailId) && (
+                    <ReviewEditor
+                      review={reviews.find((review) => review.emailId === selectedEmail.emailId)}
+                      email={selectedEmail}
+                      onComplete={completeReview}
+                    />
+                  )}
                 </>
               ) : <p className="text-sm text-slate-500">Select an email to inspect it.</p>}
             </section>

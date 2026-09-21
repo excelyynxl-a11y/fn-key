@@ -119,6 +119,21 @@ const emailSchema = new mongoose.Schema({
     defectFields: [{ type: String, enum: COMPARISON_FIELDS }],
     fieldDetails: { type: Map, of: mongoose.Schema.Types.Mixed, default: {} }
   },
+  reviewOverrides: {
+    category: { type: String, enum: EMAIL_CATEGORIES, default: null },
+    roles: {
+      siAttachmentReference: { type: String, default: null },
+      blAttachmentReference: { type: String, default: null }
+    },
+    fields: [{
+      documentType: { type: String, enum: ['SI', 'BL'], required: true },
+      field: { type: String, enum: COMPARISON_FIELDS, required: true },
+      rawValue: { type: String, required: true }
+    }],
+    note: { type: String, default: null },
+    updatedBy: { type: String, default: null },
+    updatedAt: { type: Date, default: null }
+  },
   failure: {
     code: { type: String, default: null },
     message: { type: String, default: null },

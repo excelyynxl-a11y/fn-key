@@ -5,6 +5,7 @@ import { compareDocuments } from './comparisonService.js';
 import { detectDocumentRolesWithAi, extractDocumentFieldsWithAi } from './documentAiService.js';
 import { identifyDocumentRoles } from './documentTypeService.js';
 import { extractRequiredFields } from './fieldExtractionService.js';
+import { FIELD_NORMALIZERS } from './normalizationService.js';
 
 function reviewResult(category, reviewReason) {
   return {
@@ -50,6 +51,54 @@ function parsedByReference(attachments, reference) {
   return attachments.find((attachment) => attachment.reference === reference);
 }
 
+export function rolesFromHumanOverride(attachments, roleOverride, note = '') {
+  const siReference = roleOverride?.siAttachmentReference;
+  const blReference = roleOverride?.blAttachmentReference;
+  if (!siReference && !blReference) return null;
+  const validReferences = new Set(attachments.map(({ reference }) => reference));
+  const valid = Boolean(siReference && blReference && siReference !== blReference
+    && validReferences.has(siReference) && validReferences.has(blReference));
+  const identified = attachments.map((attachment) => {
+    const documentType = attachment.reference === siReference
+      ? 'SI'
+      : attachment.reference === blReference ? 'BL' : 'UNKNOWN';
+    return {
+      ...attachment,
+      documentType,
+      roleMethod: documentType === 'UNKNOWN' ? null : 'human',
+      roleConfidence: documentType === 'UNKNOWN' ? null : 1,
+      roleEvidence: documentType === 'UNKNOWN' ? [] : [{ source: 'human', phrase: note, role: documentType, score: 1 }]
+    };
+  });
+  return {
+    si: valid ? identified.find(({ documentType }) => documentType === 'SI') : null,
+    bl: valid ? identified.find(({ documentType }) => documentType === 'BL') : null,
+    valid,
+    ambiguous: !valid,
+    wrongTypeDetected: false,
+    attachments: identified
+  };
+}
+
+export function applyHumanFieldOverrides(fields, documentType, overrides = [], note = '') {
+  const updated = { ...fields };
+  for (const override of overrides.filter((entry) => entry.documentType === documentType)) {
+    updated[override.field] = {
+      rawValue: override.rawValue,
+      normalizedValue: FIELD_NORMALIZERS[override.field](override.rawValue),
+      sourceLabel: 'Human correction',
+      evidence: note,
+      location: { page: null, sheet: null, cell: null, line: null },
+      method: 'human',
+      confidence: 1,
+      evidenceVerified: true,
+      candidates: [],
+      ambiguous: false
+    };
+  }
+  return updated;
+}
+
 function mergeAiFields(ruleFields, aiFields) {
   return Object.fromEntries(COMPARISON_FIELDS.map((field) => [
     field,
@@ -81,8 +130,10 @@ async function resolveDocumentRoles(attachments, options) {
   }
 }
 
-async function resolveDocumentFields(attachment, options) {
-  const ruleFields = extractRequiredFields(attachment.parsedDocument);
+async function resolveDocumentFields(attachment, options, documentType, overrides, note) {
+  const ruleFields = applyHumanFieldOverrides(
+    extractRequiredFields(attachment.parsedDocument), documentType, overrides, note
+  );
   const requestedFields = missingRequiredFields(ruleFields);
   if (requestedFields.length === 0) return { fields: ruleFields, usedAi: false, aiError: null };
 
@@ -119,7 +170,22 @@ export function missingRequiredFields(fields) {
 
 export async function processEmail(email, repository, options = {}) {
   const sourceEmail = { emailId: email.emailId ?? email.email_id, ...(email.source ?? email) };
-  const classification = await classifyEmail(sourceEmail, options);
+  const overrides = email.reviewOverrides ?? {};
+  const existingClassification = email.classification?.category ? email.classification : null;
+  const classification = overrides.category
+    ? {
+        ...(existingClassification ?? {}),
+        category: overrides.category,
+        method: 'human',
+        confidence: 1,
+        reason: overrides.note ?? 'Human review correction',
+        evidencePhrases: [],
+        matchedEvidence: [],
+        needsAiFallback: false
+      }
+    : options.reuseClassification && existingClassification
+      ? existingClassification
+      : await classifyEmail(sourceEmail, options);
   const sourceAttachments = email.source?.attachments ?? email.attachments ?? [];
   if (classification.category !== 'BL_COMPARISON') {
     return {
@@ -160,7 +226,10 @@ export async function processEmail(email, repository, options = {}) {
   }
 
   const hasScannedAttachment = parsedAttachments.some(({ parserError }) => parserError?.code === 'PARSER_SCANNED');
-  const roleResolution = await resolveDocumentRoles(parsedAttachments, options);
+  const humanRoles = rolesFromHumanOverride(parsedAttachments, overrides.roles, overrides.note);
+  const roleResolution = humanRoles
+    ? { roles: humanRoles, attachments: humanRoles.attachments, aiError: null }
+    : await resolveDocumentRoles(parsedAttachments, options);
   const roles = roleResolution.roles;
   parsedAttachments = roleResolution.attachments;
   if (!roles.valid) {
@@ -175,8 +244,8 @@ export async function processEmail(email, repository, options = {}) {
   const siAttachment = parsedByReference(parsedAttachments, roles.si.reference);
   const blAttachment = parsedByReference(parsedAttachments, roles.bl.reference);
   const [siExtraction, blExtraction] = await Promise.all([
-    resolveDocumentFields(siAttachment, options),
-    resolveDocumentFields(blAttachment, options)
+    resolveDocumentFields(siAttachment, options, 'SI', overrides.fields, overrides.note),
+    resolveDocumentFields(blAttachment, options, 'BL', overrides.fields, overrides.note)
   ]);
   const siFields = siExtraction.fields;
   const blFields = blExtraction.fields;
