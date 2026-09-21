@@ -71,7 +71,7 @@ export async function learnClassificationPhrases({
       continue;
     }
 
-    const existing = await knowledgeModel.findOne({
+    let existing = await knowledgeModel.findOne({
       kind: 'email_category', target: category, normalizedPhrase: validation.normalizedPhrase
     }).lean();
     if (existing?.supportSources?.includes(email.emailId)) {
@@ -81,12 +81,48 @@ export async function learnClassificationPhrases({
 
     let entry;
     let eventType;
-    if (existing) {
-      entry = await knowledgeModel.findOneAndUpdate({ _id: existing._id }, {
+    if (!existing) {
+      try {
+        const created = await knowledgeModel.create({
+          kind: 'email_category',
+          target: category,
+          phrase,
+          normalizedPhrase: validation.normalizedPhrase,
+          tokenCount: validation.tokenCount,
+          allowedLocations: ['subject', 'body'],
+          weight: 2,
+          status: 'probation',
+          source: 'ai',
+          sourceVersion: KNOWLEDGE_VERSION,
+          sourceEmailId: email.emailId,
+          supportCount: 1,
+          supportSources: [email.emailId],
+          lastSupportedAt: new Date()
+        });
+        entry = created.toObject ? created.toObject() : created;
+        eventType = 'knowledge.created';
+      } catch (error) {
+        if (error?.code !== 11000) throw error;
+        existing = await knowledgeModel.findOne({
+          kind: 'email_category', target: category, normalizedPhrase: validation.normalizedPhrase
+        }).lean();
+      }
+    }
+
+    if (!entry && existing) {
+      const updated = await knowledgeModel.updateOne({
+        _id: existing._id,
+        supportSources: { $ne: email.emailId }
+      }, {
         $addToSet: { supportSources: email.emailId },
         $inc: { supportCount: 1 },
         $set: { lastSupportedAt: new Date() }
-      }, { new: true }).lean();
+      });
+      if (updated.modifiedCount === 0) {
+        outcomes.push({ phrase, accepted: true, duplicateSupport: true, status: existing.status });
+        continue;
+      }
+      entry = await knowledgeModel.findOne({ _id: existing._id }).lean();
       eventType = 'knowledge.supported';
       if (entry.status === 'probation' && entry.supportCount >= CLASSIFICATION_DEFAULTS.promotionSupportCount) {
         entry = await knowledgeModel.findOneAndUpdate(
@@ -96,25 +132,6 @@ export async function learnClassificationPhrases({
         ).lean();
         eventType = 'knowledge.promoted';
       }
-    } else {
-      entry = await knowledgeModel.create({
-        kind: 'email_category',
-        target: category,
-        phrase,
-        normalizedPhrase: validation.normalizedPhrase,
-        tokenCount: validation.tokenCount,
-        allowedLocations: ['subject', 'body'],
-        weight: 2,
-        status: 'probation',
-        source: 'ai',
-        sourceVersion: KNOWLEDGE_VERSION,
-        sourceEmailId: email.emailId,
-        supportCount: 1,
-        supportSources: [email.emailId],
-        lastSupportedAt: new Date()
-      });
-      entry = entry.toObject ? entry.toObject() : entry;
-      eventType = 'knowledge.created';
     }
 
     await auditModel.create({
