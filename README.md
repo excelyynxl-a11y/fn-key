@@ -1,6 +1,8 @@
 # FN Key - MERN development environment
 
-SDOC is an adaptive shipping-document verification application built on React, Express, and MongoDB. Stage 4 imports and processes the 520-email challenge bundle, explains every classification and document decision, queues unresolved cases for human correction, exposes reversible knowledge controls, and reports operational coverage, latency, cache, cost, and review metrics. Structured AI or vision is used only for unresolved classifications, document roles, or fields; validated results are cached and never directly choose the final status.
+SDOC is an adaptive shipping-document verification application built on React, Express, and MongoDB. The Stage 5 build imports and processes the 520-email challenge bundle, explains every classification and document decision, queues unresolved cases for human correction, exposes reversible knowledge controls, and reports operational coverage, latency, cache, cost, and review metrics. Structured AI or vision is used only for unresolved classifications, document roles, or fields; validated results are cached and never directly choose the final status.
+
+The architecture is deterministic-first: auditable rules handle known evidence, structured AI handles uncertainty, and deterministic validation produces the final comparison status. This keeps routine processing fast and inexpensive without allowing model output to silently bypass the submission contract.
 
 ## Stack and prerequisites
 
@@ -33,11 +35,12 @@ OPENAI_MODEL=gpt-5.5
 
 Host ports bind to loopback for local development. The backend uses `MONGO_URI` to connect to MongoDB Atlas or another reachable MongoDB deployment. Browser JavaScript uses the host API URL, because the browser cannot resolve Compose service names. The challenge bundle is mounted read-only at `/data/sdoc` inside the API container.
 
-## Stage 4 workflow
+## Operations workflow
 
 1. Open http://localhost:5173.
 2. Select **Start new run**.
 3. The API classifies each message, parses supported attachment formats, resolves SI/BL roles, and extracts and normalizes the seven comparison fields.
+   An active run can be stopped from the progress panel; no new emails are scheduled after cancellation is requested.
 4. Select an inbox row to inspect classification evidence, parser outcomes, field values, page/sheet/cell/line evidence, extraction method, confidence, and final status.
 5. Download a completed run's exact submission object from `GET /api/runs/:runId/submission`.
 6. Resolve review cases with a required note and preview the deterministic outcome before saving.
@@ -62,7 +65,9 @@ Implemented API paths:
 | `GET` | `/api/runs` | List processing runs |
 | `GET` | `/api/runs/:runId` | Poll run progress |
 | `POST` | `/api/runs/:runId/retry` | Retry failed and review items |
+| `POST` | `/api/runs/:runId/cancel` | Cooperatively stop an active run |
 | `GET` | `/api/runs/:runId/submission` | Validate and export submission JSON |
+| `POST` | `/api/runs/:runId/submission/validate` | Validate schema and exact email-ID coverage without downloading |
 | `GET` | `/api/runs/:runId/metrics` | Return coverage, AI, cache, latency, cost, and review metrics |
 | `GET` | `/api/emails?runId=...` | List results for a run |
 | `GET` | `/api/emails/:emailId` | Inspect one complete result |
@@ -92,6 +97,16 @@ cd server && npm test
 npm run evaluate:classification
 cd ../client && npm run build
 ```
+
+Export and independently validate a completed run from `server/`:
+
+```sh
+npm run submission:export -- <runId> submission.json http://localhost:5000
+npm run submission:validate -- submission.json ../sdoc-hackathon-bundle
+npm audit --omit=dev
+```
+
+Evaluation evidence and the rehearsable demo package are in [`docs/EVALUATION_LOG.md`](docs/EVALUATION_LOG.md), [`docs/DEMO_SCRIPT.md`](docs/DEMO_SCRIPT.md), and [`docs/PRESENTATION.md`](docs/PRESENTATION.md).
 
 Use Ctrl+C to stop an attached run. After Dockerfile or dependency changes, use `docker compose up --build`. Edit files under `client/src/` and `server/src/` on your host for hot reload; no rebuild is needed. Vite listens on `0.0.0.0`; polling is enabled for Docker Desktop mounts, and Nodemon polls the backend files.
 
@@ -123,6 +138,9 @@ Compose reads a root `.env` and explicitly passes configuration to containers. K
 | `OPENAI_MODEL` | `gpt-5.5` | Configurable Responses API model |
 | `OPENAI_MAX_ATTEMPTS` | `3` | Maximum structured-AI attempts for transient failures |
 | `OPENAI_TIMEOUT_MS` | `20000` | Timeout per AI attempt in milliseconds |
+| `JSON_BODY_LIMIT` | `1mb` | Maximum JSON request body accepted by Express |
+| `API_RATE_LIMIT_MAXIMUM` | `300` | Requests allowed per client within one rate-limit window |
+| `API_RATE_LIMIT_WINDOW_MS` | `60000` | Rate-limit window in milliseconds |
 | `OPENAI_INPUT_COST_PER_MILLION` | `0` | Optional input-token price used for estimated cost |
 | `OPENAI_OUTPUT_COST_PER_MILLION` | `0` | Optional output-token price used for estimated cost |
 | `CLASSIFICATION_MIN_SCORE` | `4` | Minimum deterministic winning score |
@@ -135,6 +153,14 @@ If changing `PORT`, also update `VITE_API_URL`. If changing `CLIENT_PORT`, updat
 ## MongoDB and persistence
 
 Email records, processing runs, extracted fields, comparison results, review history, and per-attempt operational metrics are persisted through Mongoose. Completed-run metric snapshots remain available after a later run claims the current email records. Dataset imports use `emailId` upserts, so rerunning the same source does not create duplicate email documents. MongoDB network access must allow the API host; if Atlas reports that no server can be reached, check its network access list and credentials.
+
+## Security, privacy, and limitations
+
+- Source documents are processed locally from the configured dataset root; path traversal, extension/signature mismatch, oversized parser inputs, and excessive OOXML expansion are rejected.
+- API responses include request IDs. Browser origins use an exact allowlist, JSON bodies are bounded, API traffic is rate limited, and routine server logs do not print document bodies or credentials.
+- AI requests contain only the material required for the unresolved classification, role, or field. Provider credentials remain server-side.
+- Learned category knowledge currently uses exact normalized phrase matching. Sentence-length phrases may generalize poorly to differently worded datasets; this is recorded in the evaluation log and should be addressed with bounded concept/n-gram learning before production use.
+- Scanned documents without locally verifiable evidence remain `NEEDS_REVIEW`. Authentication, multi-user authorization, live email-provider ingestion, and distributed workers remain post-hackathon work.
 
 ## Structure
 
