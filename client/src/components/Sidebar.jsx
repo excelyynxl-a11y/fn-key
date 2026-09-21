@@ -1,8 +1,26 @@
-import React from 'react'
-
 const Sidebar = () => {
   return (
-    <div>Sidebar</div>
+    <aside className="border-b border-slate-800 bg-slate-950 px-5 py-5 text-white lg:min-h-screen lg:w-72 lg:border-b-0 lg:border-r">
+      <div className="flex items-center gap-3">
+        <div className="grid size-10 place-items-center rounded-xl bg-blue-600 font-bold">S</div>
+        <div>
+          <p className="font-semibold">SDOC</p>
+          <p className="text-xs text-slate-400">Document verification</p>
+        </div>
+      </div>
+      <div className="mt-8 rounded-2xl border border-slate-800 bg-slate-900 p-4">
+        <p className="text-xs font-semibold uppercase tracking-[0.16em] text-blue-400">Stage 1</p>
+        <p className="mt-2 text-sm leading-6 text-slate-300">
+          Deterministic inbox ingestion and plain-text SI/BL comparison with source evidence.
+        </p>
+      </div>
+      <ul className="mt-6 space-y-2 text-sm text-slate-300">
+        <li className="rounded-xl bg-slate-800 px-4 py-3 font-medium text-white">Run dashboard</li>
+        <li className="px-4 py-2">520 source emails</li>
+        <li className="px-4 py-2">7 required fields</li>
+        <li className="px-4 py-2">Exact JSON export</li>
+      </ul>
+    </aside>
   )
 }
 
