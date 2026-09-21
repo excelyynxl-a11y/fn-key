@@ -15,8 +15,8 @@ These values identify the build being evaluated. Change them only with a new eva
 
 | Date | Check | Result | Interpretation |
 | --- | --- | --- | --- |
-| 2026-09-21 | Server automated suite | 74/74 passing | Covers schemas, exact ID invariants, parsers, deterministic comparison, review safety, cancellation, security boundaries, AI failures, and representative end-to-end cases. |
-| 2026-09-21 | Client production build | Passed | Vite production bundle compiles successfully. |
+| 2026-09-22 | Server automated suite | 75/75 passing | Covers schemas, exact ID invariants, parsers, deterministic comparison, review safety, cancellation, security boundaries, AI failures, and representative end-to-end cases. |
+| 2026-09-22 | Client production build | Passed | Vite production bundle compiles successfully. |
 | 2026-09-21 | Manually labelled classification development set | 15/15; accuracy 1.0; macro-F1 1.0; deterministic coverage 1.0 | Confirms the five categories on a small, unambiguous development set. It is not a held-out production estimate. |
 | 2026-09-21 | Submission artifact validator against challenge IDs | 520 expected / 520 actual; schema valid | Confirms the validator rejects missing, duplicate, unexpected, or malformed output rows. |
 | 2026-09-21 | Production dependency audit | 0 known vulnerabilities in client and server production dependencies | Snapshot only; rerun before release. |

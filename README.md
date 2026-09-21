@@ -1,8 +1,155 @@
 # SDOC
 
-SDOC is an adaptive shipping-document verification application built on React, Express, and MongoDB. The Stage 5 build imports and processes the 520-email challenge bundle, explains every classification and document decision, queues unresolved cases for human correction, exposes reversible knowledge controls, and reports operational coverage, latency, cache, cost, and review metrics. Structured AI or vision is used only for unresolved classifications, document roles, or fields; validated results are cached and never directly choose the final status.
+**Adaptive, explainable shipping-document verification for high-volume operations.**
 
-The architecture is deterministic-first: auditable rules handle known evidence, structured AI handles uncertainty, and deterministic validation produces the final comparison status. This keeps routine processing fast and inexpensive without allowing model output to silently bypass the submission contract.
+SDOC processes the complete 520-email hackathon bundle, classifies each message, identifies Shipping Instruction (SI) and Bill of Lading (BL) documents, extracts seven business-critical fields, and produces a submission-ready result. Every decision remains inspectable: operators can see the evidence, correct uncertain cases, moderate learned knowledge, and export a schema-validated submission.
+
+The core design is **deterministic first, AI only when needed**. Auditable rules resolve known evidence, structured AI handles only unresolved classifications, document roles, or fields, and deterministic validation always owns the final comparison status. This makes the system safer to review and materially reduces token usage.
+
+## Submission at a glance
+
+| Area | Delivered result |
+| --- | --- |
+| Challenge coverage | Exact validation of all 520 expected email IDs |
+| Classification | Five required categories with explainable evidence and confidence gates |
+| Document verification | SI/BL role detection and deterministic comparison of seven required fields |
+| Input formats | TXT, PDF, DOCX, and XLSX with format-aware evidence locations |
+| Human oversight | Review queue, correction preview, retry/reopen flow, and immutable audit history |
+| Adaptive learning | Seed, probation, trusted, blocked, and retired phrase states with moderation controls |
+| Operational visibility | Coverage, fallback, cache, latency, token, estimated cost, and review metrics |
+| Verification evidence | 75/75 automated tests, 15/15 labelled classification cases, 520/520 output IDs |
+| Observed AI usage | $0.80 across 229,219 tokens and 557 API requests in the captured development window |
+
+## Technical Architecture
+
+```mermaid
+flowchart LR
+    U[Operations user] --> UI[React 19 dashboard]
+    UI --> API[Express 5 API]
+    API --> RUN[Run orchestration]
+    API --> REVIEW[Review and knowledge APIs]
+
+    RUN --> INGEST[Safe dataset ingestion]
+    INGEST --> CLASSIFY[Deterministic email classifier]
+    CLASSIFY -->|uncertain only| AI[Structured OpenAI fallback]
+    CLASSIFY --> PARSE[TXT / PDF / DOCX / XLSX parsers]
+    PARSE --> ROLES[SI / BL role resolution]
+    ROLES --> EXTRACT[Seven-field extraction]
+    ROLES -->|unresolved only| AI
+    EXTRACT -->|missing fields only| AI
+    EXTRACT --> NORMALIZE[Field-specific normalization]
+    NORMALIZE --> COMPARE[Deterministic comparison]
+    COMPARE --> OUTPUT[OK / MISMATCH / NEEDS_REVIEW]
+
+    AI --> CACHE[(Content-addressed AI cache)]
+    RUN --> DB[(MongoDB)]
+    REVIEW --> DB
+    CACHE --> DB
+    DB --> UI
+```
+
+The React client is an operations console rather than a black-box demo. It polls asynchronous processing runs, exposes per-stage evidence, supports human corrections, and downloads the exact submission contract. Express provides bounded and rate-limited APIs. MongoDB persists source hashes, runs, processing attempts, results, review cases, learned knowledge, cache entries, and audit events. A single production Docker image serves the compiled client and `/api`, while Docker Compose retains separate hot-reload services for local development.
+
+## Implementation Details
+
+### 1. Ingestion and orchestration
+
+- The dataset repository resolves paths inside the configured bundle root, rejects traversal, and imports records by stable `emailId` upserts.
+- Runs are asynchronous, concurrency-bounded, cancellable, retryable, and versioned with `5.0.0-stage-5` for reproducibility.
+- Submission export validates the schema and enforces exact, duplicate-free coverage of all 520 challenge IDs.
+
+### 2. Adaptive email classification
+
+- Weighted phrase evidence is scored separately across subject and body; minimum score and winning-margin gates prevent weak matches from being accepted.
+- Only uncertain messages invoke a strict structured-output AI fallback. Returned evidence must occur verbatim in the source before it is trusted.
+- Useful AI or human evidence can enter the knowledge base in low-weight probation. Generic, sensitive, shipment-specific, conflicting, or overlong phrases are rejected, and operators can block or retire entries.
+
+### 3. Document understanding and comparison
+
+- Format-specific parsers preserve evidence coordinates: lines for TXT, pages for PDF, paragraphs/table cells for DOCX, and sheets/cells for XLSX.
+- File signatures are checked independently of extensions. Corrupt, encrypted, oversized, unsupported, sparse, and scanned inputs remain distinguishable instead of being collapsed into one error.
+- Rules first identify SI/BL roles and extract `shipper`, `consignee`, `notify_party`, `port_of_loading`, `port_of_discharge`, `container_count`, and `gross_weight_kg`.
+- AI receives only unresolved roles or missing fields. Its evidence is verified against extracted text, while field-specific normalizers and the deterministic comparator alone produce `OK`, `MISMATCH`, or `NEEDS_REVIEW`.
+
+### 4. Human review and operational learning
+
+- Uncertain cases enter a stage-specific review queue for attachment, readability, role, or field issues.
+- Reviewers preview the deterministic result before saving corrections; optimistic version checks protect concurrent updates.
+- Resolved cases retain notes and history, can be reopened, and can be reprocessed with human overrides. Knowledge moderation actions are separately audited and reversible.
+
+### 5. Observability and cost control
+
+- Every processing attempt records duration, AI fallbacks by stage, cache hits, input/output tokens, and estimated cost.
+- AI cache keys include the source hash, purpose, model, prompt version, schema version, and requested fields, preventing stale results from crossing contract changes.
+- Completed runs retain metric snapshots covering deterministic coverage, p95 latency, fallback and cache rates, review resolution, learning impact, and estimated spend.
+
+## AI Usage and Cost Efficiency
+
+Real API telemetry is valuable submission evidence when its scope is stated honestly. The captured OpenAI dashboard covers a seven-day development window and shows **$0.80 spend, 229,219 tokens, and 557 requests**.
+
+![OpenAI API usage showing $0.80 spend, 229,219 tokens, and 557 requests](docs/assets/openai-api-usage.jpg)
+
+Derived from that observed aggregate:
+
+| Metric | Calculation | Observed value |
+| --- | --- | ---: |
+| Tokens per API request | 229,219 / 557 | 412 |
+| Cost per API request | $0.80 / 557 | $0.00144 |
+| Blended cost per 1M tokens | $0.80 / 229,219 × 1,000,000 | $3.49 |
+
+If the same request mix and blended rate scaled linearly, the reference scenarios would be:
+
+| API requests | Approx. tokens | Illustrative cost |
+| ---: | ---: | ---: |
+| 1,000 | 411,524 | $1.44 |
+| 10,000 | 4.12M | $14.36 |
+| 100,000 | 41.15M | $143.63 |
+| 1,000,000 | 411.52M | $1,436.27 |
+
+As a secondary scenario, **only if** the 557 captured requests are treated as one representative 520-email pass, the implied rate is 1.07 API requests and $0.00154 per email—about **$153.85 per 100,000 emails** or **$1,538.46 per million emails**.
+
+> These are linear illustrations, not price guarantees. The screenshot aggregates development activity rather than an isolated production benchmark; model mix, cached-input share, prompt size, output size, retries, document complexity, and future provider pricing can change the result. Re-run a clean production-like workload before making a contractual cost claim. GPT-5.5 input, cached-input, and output tokens also have different list prices; see the [official OpenAI model pricing](https://developers.openai.com/api/docs/models/gpt-5.5).
+
+The efficiency claim is supported by architecture, not the screenshot alone: deterministic routing avoids unnecessary calls, field-level fallback sends only unresolved data, strict schemas constrain output, and content-addressed caching prevents repeat charges.
+
+## Challenges Faced
+
+### Heterogeneous documents without losing evidence
+
+The same business field can appear in a text line, PDF page, Word table, or spreadsheet cell. A common text-only parser would have made explanations weak, so each adapter preserves native location metadata and exposes parser-specific failure states.
+
+### Balancing automation with safety
+
+Forcing an answer improves apparent coverage but hides operational risk. SDOC instead makes uncertainty explicit through confidence gates, evidence verification, `NEEDS_REVIEW`, and human correction. Scanned evidence that cannot be verified locally is never silently accepted.
+
+### Using AI without making the workflow opaque or expensive
+
+Naively sending every email and attachment to a model would be costly and difficult to audit. The implemented cascade uses deterministic rules first, asks AI narrow structured questions only for unresolved work, validates responses, and caches accepted results.
+
+### Learning without poisoning future decisions
+
+Automatically learned phrases can be generic, sensitive, or shipment-specific. New evidence therefore starts in probation, promotion requires repeated support, conflicts are tracked, and moderation remains reversible. Evaluation also revealed that exact phrase matching generalizes poorly to heavily reworded external data; this limitation is recorded rather than hidden.
+
+### Preserving the exact submission contract
+
+Parallel processing, retries, review overrides, and partial failures can easily create missing or duplicate rows. Stable IDs, idempotent persistence, versioned runs, and an independent validator enforce exact challenge coverage before export.
+
+## Future Roadmap
+
+1. **Semantic but bounded learning:** replace exact long-phrase reuse with canonical concepts and 2–5-token candidates, refresh knowledge between processing epochs, and evaluate false positives on held-out data.
+2. **OCR with evidence grounding:** add scanned-PDF/image OCR while retaining page coordinates and the same evidence-verification requirement.
+3. **Production job execution:** move runs to durable workers with a queue, leases, idempotency keys, resumable progress, and horizontal scaling.
+4. **Enterprise access controls:** activate authentication, organization-scoped data, role-based review permissions, SSO, and retention policies.
+5. **Live integrations:** ingest from Microsoft 365/Gmail and export approved results to transport-management or ERP systems.
+6. **Continuous evaluation:** add drift dashboards, larger labelled corpora, per-format extraction scores, calibrated confidence, and production cost/quality experiments.
+7. **Further cost optimization:** route easy fallbacks to smaller models, evaluate Batch API processing, increase prompt-cache reuse, and set per-run cost budgets.
+
+## Demo and evaluation evidence
+
+- [`docs/DEMO_SCRIPT.md`](docs/DEMO_SCRIPT.md) provides the rehearsable end-to-end judge flow.
+- [`docs/PRESENTATION.md`](docs/PRESENTATION.md) contains the presentation narrative and proof points.
+- [`docs/EVALUATION_LOG.md`](docs/EVALUATION_LOG.md) records frozen versions, repeatable checks, measured results, and known limitations.
+- [`IMPLEMENTATION_PLAN.md`](IMPLEMENTATION_PLAN.md) traces delivery across all five stages.
 
 ## Stack and prerequisites
 
@@ -15,8 +162,8 @@ The architecture is deterministic-first: auditable rules handle known evidence, 
 ## Start
 
 ```sh
-git clone <repository>
-cd <repository>
+git clone https://github.com/excelyynxl-a11y/fn-key.git
+cd fn-key
 docker compose up --build
 ```
 
