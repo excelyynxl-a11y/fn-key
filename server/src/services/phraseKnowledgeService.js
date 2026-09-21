@@ -60,3 +60,14 @@ export async function loadActiveEmailPhrases(knowledgeModel = KnowledgePhrase) {
     status: { $in: ['seed', 'probation', 'trusted'] }
   }).sort({ tokenCount: -1, normalizedPhrase: 1 }).lean();
 }
+
+export async function recordKnowledgeUsage(matchedEvidence = [], knowledgeModel = KnowledgePhrase) {
+  const ids = [...new Set(matchedEvidence.map(({ knowledgeId }) => knowledgeId).filter(Boolean))];
+  if (ids.length === 0) return { modifiedCount: 0 };
+  return knowledgeModel.bulkWrite(ids.map((_id) => ({
+    updateOne: {
+      filter: { _id },
+      update: { $inc: { usageCount: 1 }, $set: { lastUsedAt: new Date() } }
+    }
+  })), { ordered: false });
+}

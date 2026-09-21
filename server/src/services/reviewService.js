@@ -6,6 +6,7 @@ import ReviewCase from '../models/ReviewCase.js';
 import { createDatasetRepository } from '../repositories/datasetRepository.js';
 import { defaultDatasetPath } from './inboxService.js';
 import { loadActiveEmailPhrases } from './phraseKnowledgeService.js';
+import { learnClassificationPhrases } from './learningService.js';
 import { processEmail } from './pipelineService.js';
 
 export function reviewStageForReason(reviewReason) {
@@ -118,6 +119,15 @@ export async function resolveReview(reviewId, input, {
   if (input.preview) return { review, preview: processed.result, processed };
 
   const reviewOverrides = mergeCorrections(email.reviewOverrides, input.corrections, input.note, input.reviewer);
+  let knowledgeOutcome = null;
+  if (input.knowledgeUpdate?.enabled) {
+    knowledgeOutcome = await learnClassificationPhrases({
+      email: { emailId: email.emailId, subject: email.source.subject, body: email.source.body },
+      category: processed.classification.category,
+      evidencePhrases: [input.knowledgeUpdate.phrase],
+      source: 'human'
+    });
+  }
   await emailModel.updateOne({ emailId: review.emailId, lastRunId: review.runId }, {
     $set: {
       reviewOverrides,
@@ -138,7 +148,7 @@ export async function resolveReview(reviewId, input, {
       resolution: {
         action: 'correct', note: input.note, reviewer: input.reviewer,
         corrections: input.corrections, previousResult: email.result, nextResult: processed.result,
-        knowledgeUpdate: input.knowledgeUpdate ?? { enabled: false }
+        knowledgeUpdate: input.knowledgeUpdate ?? { enabled: false }, knowledgeOutcome
       }
     }
   });

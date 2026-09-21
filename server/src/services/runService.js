@@ -5,7 +5,8 @@ import AuditEvent from '../models/AuditEvent.js';
 import ProcessingRun from '../models/ProcessingRun.js';
 import { createDatasetRepository } from '../repositories/datasetRepository.js';
 import { defaultDatasetPath, importDataset } from './inboxService.js';
-import { loadActiveEmailPhrases, seedEmailCategoryPhrases } from './phraseKnowledgeService.js';
+import { loadActiveEmailPhrases, recordKnowledgeUsage, seedEmailCategoryPhrases } from './phraseKnowledgeService.js';
+import { seedDocumentKnowledge } from './knowledgeService.js';
 import { processEmail } from './pipelineService.js';
 import { syncReviewCase } from './reviewService.js';
 
@@ -59,6 +60,7 @@ async function processOneEmail(email, repository, runId, classificationOptions, 
       details: { retry }
     });
     const processed = await processEmail(email, repository, classificationOptions);
+    await recordKnowledgeUsage(processed.classification.matchedEvidence);
     await syncReviewCase({ runId, emailId: email.emailId, result: processed.result });
     await AuditEvent.create({
       eventType: 'email.processing.completed',
@@ -170,6 +172,7 @@ export async function executeRun(runId, { retryOnly = false } = {}) {
     });
 
     await seedEmailCategoryPhrases();
+    await seedDocumentKnowledge();
     const phraseEntries = await loadActiveEmailPhrases();
     const repository = createDatasetRepository(defaultDatasetPath());
     const concurrency = Number.parseInt(process.env.PROCESSING_CONCURRENCY ?? '4', 10);

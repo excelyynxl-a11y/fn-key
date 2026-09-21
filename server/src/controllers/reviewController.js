@@ -42,6 +42,9 @@ const resolveReviewSchema = z.object({
   if (!corrections || (!corrections.category && !corrections.roles && !corrections.fields?.length)) {
     context.addIssue({ code: 'custom', path: ['corrections'], message: 'A correction is required' });
   }
+  if (value.knowledgeUpdate?.enabled && !value.knowledgeUpdate.phrase) {
+    context.addIssue({ code: 'custom', path: ['knowledgeUpdate', 'phrase'], message: 'A phrase is required for a knowledge update' });
+  }
 });
 
 const retrySchema = z.object({ runId: z.string().min(1) }).strict();

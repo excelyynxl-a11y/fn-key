@@ -1,13 +1,13 @@
 import mongoose from 'mongoose';
-import { EMAIL_CATEGORIES, KNOWLEDGE_STATUSES } from '../constants/challenge.js';
+import { COMPARISON_FIELDS, EMAIL_CATEGORIES, KNOWLEDGE_STATUSES } from '../constants/challenge.js';
 
 const knowledgePhraseSchema = new mongoose.Schema({
-  kind: { type: String, enum: ['email_category'], required: true, index: true },
-  target: { type: String, enum: EMAIL_CATEGORIES, required: true, index: true },
+  kind: { type: String, enum: ['email_category', 'document_label', 'field_alias'], required: true, index: true },
+  target: { type: String, enum: [...EMAIL_CATEGORIES, 'SI', 'BL', ...COMPARISON_FIELDS], required: true, index: true },
   phrase: { type: String, required: true },
   normalizedPhrase: { type: String, required: true, index: true },
   tokenCount: { type: Number, min: 1, required: true },
-  allowedLocations: [{ type: String, enum: ['subject', 'body'] }],
+  allowedLocations: [{ type: String, enum: ['subject', 'body', 'filename', 'header', 'line', 'cell'] }],
   weight: { type: Number, min: 0, required: true },
   status: { type: String, enum: KNOWLEDGE_STATUSES, required: true, index: true },
   source: { type: String, enum: ['team_seed', 'ai', 'human'], required: true },

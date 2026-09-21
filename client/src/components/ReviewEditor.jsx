@@ -15,6 +15,8 @@ export default function ReviewEditor({ review, email, onComplete }) {
   const [blReference, setBlReference] = useState(attachments[1]?.reference ?? '');
   const [note, setNote] = useState('');
   const [preview, setPreview] = useState(null);
+  const [learn, setLearn] = useState(false);
+  const [learningPhrase, setLearningPhrase] = useState('');
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
 
@@ -31,7 +33,11 @@ export default function ReviewEditor({ review, email, onComplete }) {
       const body = await request(`/api/reviews/${review.reviewId}`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ action, preview: previewOnly, note, corrections: action === 'correct' ? corrections : undefined })
+        body: JSON.stringify({
+          action, preview: previewOnly, note,
+          corrections: action === 'correct' ? corrections : undefined,
+          knowledgeUpdate: action === 'correct' && learn ? { enabled: true, phrase: learningPhrase } : { enabled: false }
+        })
       });
       setPreview(body.data.preview);
       if (!previewOnly) onComplete(body.data);
@@ -65,6 +71,12 @@ export default function ReviewEditor({ review, email, onComplete }) {
         </div>
       )}
       <textarea className="mt-3 min-h-20 w-full rounded-lg border border-amber-300 bg-white px-3 py-2 text-sm" placeholder="Required reviewer note explaining the decision" value={note} onChange={(event) => setNote(event.target.value)} />
+      {correctionType === 'category' && (
+        <div className="mt-3 rounded-lg border border-amber-200 bg-white p-3 text-xs text-slate-700">
+          <label className="flex items-center gap-2"><input type="checkbox" checked={learn} onChange={(event) => setLearn(event.target.checked)} />Add a reversible probation phrase from this correction</label>
+          {learn && <input className="mt-2 w-full rounded border border-slate-300 px-3 py-2" placeholder="Exact category-specific phrase from subject or body" value={learningPhrase} onChange={(event) => setLearningPhrase(event.target.value)} />}
+        </div>
+      )}
       {preview && <p className="mt-2 rounded-lg bg-white p-2 text-xs text-slate-700">Preview: <strong>{preview.status}</strong>{preview.reviewReason ? ` · ${preview.reviewReason.replaceAll('_', ' ')}` : ''}{preview.defectFields?.length ? ` · ${preview.defectFields.join(', ')}` : ''}</p>}
       {error && <p className="mt-2 text-xs text-rose-700">{error}</p>}
       <div className="mt-3 flex flex-wrap gap-2">

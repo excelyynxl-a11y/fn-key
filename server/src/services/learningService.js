@@ -67,6 +67,7 @@ export async function learnClassificationPhrases({
   category,
   evidencePhrases,
   responseId = null,
+  source = 'ai',
   knowledgeModel = KnowledgePhrase,
   auditModel = AuditEvent
 }) {
@@ -111,7 +112,7 @@ export async function learnClassificationPhrases({
           allowedLocations: ['subject', 'body'],
           weight: 2,
           status: 'probation',
-          source: 'ai',
+          source,
           sourceVersion: KNOWLEDGE_VERSION,
           sourceEmailId: email.emailId,
           supportCount: 1,
