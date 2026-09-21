@@ -1,7 +1,7 @@
 import { z } from 'zod';
 import Email from '../models/Email.js';
 import ProcessingRun from '../models/ProcessingRun.js';
-import { buildSubmission } from '../services/submissionService.js';
+import { buildSubmission, validateSubmissionArtifact } from '../services/submissionService.js';
 import { metricsForRun } from '../services/metricsService.js';
 import { cancelRun, retryRun, startRun } from '../services/runService.js';
 
@@ -71,6 +71,29 @@ export async function getRunMetricsController(req, res) {
   if (!run) return res.status(404).json({ data: null, error: { code: 'RUN_NOT_FOUND', message: 'Run not found', retryable: false }, meta: {} });
   const metrics = await metricsForRun(run);
   return res.json({ data: metrics, error: null, meta: { runId: run.runId } });
+}
+
+export async function validateSubmissionController(req, res) {
+  const run = await ProcessingRun.findOne({ runId: req.params.runId }).lean();
+  if (!run) return res.status(404).json({ data: null, error: { code: 'RUN_NOT_FOUND', message: 'Run not found', retryable: false }, meta: {} });
+  if (!['completed', 'completed_with_errors'].includes(run.state)) {
+    return res.status(409).json({ data: null, error: { code: 'RUN_NOT_EXPORTABLE', message: 'Run has not completed', retryable: true }, meta: {} });
+  }
+  const emails = await Email.find({ emailId: { $in: run.emailIds } }).lean({ flattenMaps: true });
+  try {
+    const submission = buildSubmission(
+      emails.map((email) => ({ emailId: email.emailId, ...email.result })),
+      run.emailIds
+    );
+    const validation = validateSubmissionArtifact(submission, run.emailIds);
+    return res.json({ data: validation, error: null, meta: { runId: run.runId } });
+  } catch (error) {
+    return res.status(409).json({
+      data: { valid: false, expectedCount: run.emailIds.length, actualCount: emails.length, errors: [error.message] },
+      error: { code: 'SUBMISSION_INVALID', message: error.message, retryable: false },
+      meta: { runId: run.runId }
+    });
+  }
 }
 
 export async function cancelRunController(req, res) {

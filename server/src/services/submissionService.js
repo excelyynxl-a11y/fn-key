@@ -55,3 +55,18 @@ export function buildSubmission(records, expectedEmailIds) {
   );
   return submissionSchema.parse(submission);
 }
+
+export function validateSubmissionArtifact(submission, expectedEmailIds) {
+  const parsed = submissionSchema.parse(submission);
+  const expected = [...new Set(expectedEmailIds)].sort();
+  if (expected.length !== expectedEmailIds.length) throw new Error('Expected email IDs contain duplicates');
+  const actual = Object.keys(parsed).sort();
+  const actualSet = new Set(actual);
+  const expectedSet = new Set(expected);
+  const missing = expected.filter((emailId) => !actualSet.has(emailId));
+  const unexpected = actual.filter((emailId) => !expectedSet.has(emailId));
+  if (missing.length || unexpected.length) {
+    throw new Error(`Submission ID mismatch; missing=${missing.join(',') || 'none'}; unexpected=${unexpected.join(',') || 'none'}`);
+  }
+  return { valid: true, expectedCount: expected.length, actualCount: actual.length, errors: [] };
+}

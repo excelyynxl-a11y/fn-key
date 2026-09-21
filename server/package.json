@@ -10,7 +10,9 @@
     "dev": "nodemon",
     "start": "node server.js",
     "test": "node --test",
-    "evaluate:classification": "node src/evaluation/runClassificationEvaluation.js"
+    "evaluate:classification": "node src/evaluation/runClassificationEvaluation.js",
+    "submission:export": "node src/evaluation/exportSubmission.js",
+    "submission:validate": "node src/evaluation/validateSubmissionFile.js"
   },
   "dependencies": {
     "bcryptjs": "3.0.3",

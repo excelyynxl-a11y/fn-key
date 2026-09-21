@@ -113,3 +113,51 @@ test('retries transient model failures with bounded exponential backoff', async 
   assert.equal(result.attempts, 2);
   assert.deepEqual(waits, [250]);
 });
+
+test('fails closed on invalid structured model output', async () => {
+  const cacheModel = { findOne: () => query(null), async updateOne() {} };
+  const client = { responses: { async parse() {
+    return {
+      status: 'completed',
+      output_parsed: { category: 'UNKNOWN', reason: '', evidencePhrases: [], confidence: 2 }
+    };
+  } } };
+  await assert.rejects(
+    classifyEmailWithAi(email, { client, cacheModel, model: 'test-model' }),
+    (error) => error.code === 'AI_CLASSIFICATION_FAILED' && error.retryable === false
+  );
+});
+
+test('does not retry a non-transient model refusal', async () => {
+  let calls = 0;
+  const cacheModel = { findOne: () => query(null), async updateOne() {} };
+  const client = { responses: { async parse() {
+    calls += 1;
+    throw Object.assign(new Error('request refused'), { status: 400 });
+  } } };
+  await assert.rejects(
+    classifyEmailWithAi(email, { client, cacheModel, model: 'test-model' }),
+    (error) => error.code === 'AI_CLASSIFICATION_FAILED' && error.retryable === false
+  );
+  assert.equal(calls, 1);
+});
+
+test('bounds retries when the model repeatedly times out', async () => {
+  let calls = 0;
+  const waits = [];
+  const cacheModel = { findOne: () => query(null), async updateOne() {} };
+  const client = { responses: { async parse() {
+    calls += 1;
+    throw Object.assign(new Error('timed out'), { name: 'AbortError' });
+  } } };
+  await assert.rejects(
+    classifyEmailWithAi(email, {
+      client, cacheModel, model: 'test-model',
+      config: { maximumAiAttempts: 3, aiTimeoutMs: 10 },
+      wait: async (milliseconds) => waits.push(milliseconds)
+    }),
+    (error) => error.code === 'AI_CLASSIFICATION_FAILED' && error.retryable === true
+  );
+  assert.equal(calls, 3);
+  assert.deepEqual(waits, [250, 500]);
+});
