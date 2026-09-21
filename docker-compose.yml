@@ -1,32 +1,19 @@
 services:
-  mongodb:
-    image: mongo:8.0
-    volumes:
-      - mongodb_data:/data/db
-    healthcheck:
-      test: ["CMD", "mongosh", "--quiet", "--eval", "quit(db.adminCommand('ping').ok ? 0 : 1)"]
-      interval: 5s
-      timeout: 5s
-      retries: 20
-      start_period: 15s
-
   server:
     build: ./server
     init: true
     ports:
-      - "127.0.0.1:${PORT:-5000}:${PORT:-5000}"
+      - "${PORT:-5000}:${PORT:-5000}"
     environment:
       NODE_ENV: development
       PORT: ${PORT:-5000}
-      MONGO_URI: ${MONGO_URI:-mongodb://mongodb:27017/mern_database}
+      MONGO_URI: ${MONGO_URI:?Set MONGO_URI in the root .env file (MongoDB Atlas)}
       CLIENT_ORIGIN: ${CLIENT_ORIGIN:-http://localhost:5173}
+      OPENAI_API_KEY: ${OPENAI_API_KEY:?Set OPENAI_API_KEY in the root .env file}
     volumes:
       - ./server:/app
       - server_node_modules:/app/node_modules
     command: sh -c "npm ci --no-audit --no-fund && exec npm run dev"
-    depends_on:
-      mongodb:
-        condition: service_healthy
     healthcheck:
       test: ["CMD", "node", "-e", "fetch('http://127.0.0.1:' + process.env.PORT + '/health').then(r => process.exit(r.ok ? 0 : 1)).catch(() => process.exit(1))"]
       interval: 5s
@@ -38,7 +25,7 @@ services:
     build: ./client
     init: true
     ports:
-      - "127.0.0.1:${CLIENT_PORT:-5173}:5173"
+      - "${CLIENT_PORT:-5173}:5173"
     environment:
       VITE_API_URL: ${VITE_API_URL:-http://localhost:5000}
       WATCH_USE_POLLING: ${WATCH_USE_POLLING:-true}
@@ -57,6 +44,5 @@ services:
       start_period: 30s
 
 volumes:
-  mongodb_data:
   server_node_modules:
   client_node_modules:
