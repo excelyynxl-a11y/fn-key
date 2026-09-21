@@ -1,4 +1,4 @@
-# FN Key - MERN development environment
+# SDOC
 
 SDOC is an adaptive shipping-document verification application built on React, Express, and MongoDB. The Stage 5 build imports and processes the 520-email challenge bundle, explains every classification and document decision, queues unresolved cases for human correction, exposes reversible knowledge controls, and reports operational coverage, latency, cache, cost, and review metrics. Structured AI or vision is used only for unresolved classifications, document roles, or fields; validated results are cached and never directly choose the final status.
 
