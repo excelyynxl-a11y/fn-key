@@ -1,7 +1,9 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 import { estimatedAiCost } from '../src/services/metricsService.js';
-import { counterIncrement, runWithConcurrency } from '../src/services/runService.js';
+import { cancelRun, counterIncrement, runWithConcurrency } from '../src/services/runService.js';
+
+function query(value) { return { async lean() { return value; } }; }
 
 test('processes every item without exceeding the concurrency limit', async () => {
   let active = 0;
@@ -18,6 +20,34 @@ test('processes every item without exceeding the concurrency limit', async () =>
 
   assert.deepEqual(processed.sort((left, right) => left - right), [1, 2, 3, 4, 5]);
   assert.equal(maximumActive, 2);
+});
+
+test('stops scheduling new work after cooperative cancellation', async () => {
+  let completed = 0;
+  let stop = false;
+  await runWithConcurrency([1, 2, 3, 4, 5], 1, async () => {
+    completed += 1;
+    stop = true;
+  }, { shouldStop: () => stop });
+  assert.equal(completed, 1);
+});
+
+test('cancels a queued run and records the operator request', async () => {
+  let update;
+  const events = [];
+  const cancelled = await cancelRun('run-1', {
+    runModel: {
+      findOne: () => query({ runId: 'run-1', state: 'queued' }),
+      findOneAndUpdate(filter, change) {
+        update = { filter, change };
+        return query({ runId: 'run-1', state: 'cancelled' });
+      }
+    },
+    auditModel: { async create(event) { events.push(event); } }
+  });
+  assert.equal(cancelled.state, 'cancelled');
+  assert.equal(update.change.$set.state, 'cancelled');
+  assert.equal(events[0].eventType, 'run.cancellation_requested');
 });
 
 test('updates live dashboard counters for a completed decision', () => {

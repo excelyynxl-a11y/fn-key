@@ -11,13 +11,25 @@ import { estimatedAiCost, refreshRunMetrics } from './metricsService.js';
 import { processEmail } from './pipelineService.js';
 import { syncReviewCase } from './reviewService.js';
 
-const activeRuns = new Set();
+const activeRuns = new Map();
 
-export async function runWithConcurrency(items, concurrency, worker) {
+async function finalizeCancelledRun(runId) {
+  const cancelledAt = new Date();
+  await ProcessingRun.updateOne({ runId }, {
+    $set: { state: 'cancelled', cancelledAt, completedAt: cancelledAt }
+  });
+  await AuditEvent.create({
+    eventType: 'run.cancelled', entityType: 'run', entityId: runId, runId,
+    details: { reason: 'operator_requested' }
+  });
+  await refreshRunMetrics(runId);
+}
+
+export async function runWithConcurrency(items, concurrency, worker, { shouldStop = () => false } = {}) {
   let nextIndex = 0;
   const workerCount = Math.min(Math.max(1, concurrency), items.length);
   await Promise.all(Array.from({ length: workerCount }, async () => {
-    while (nextIndex < items.length) {
+    while (nextIndex < items.length && !shouldStop()) {
       const currentIndex = nextIndex;
       nextIndex += 1;
       await worker(items[currentIndex], currentIndex);
@@ -146,16 +158,26 @@ async function processOneEmail(email, repository, runId, classificationOptions, 
 
 export async function executeRun(runId, { retryOnly = false } = {}) {
   if (activeRuns.has(runId)) throw new Error(`Run ${runId} is already active`);
-  activeRuns.add(runId);
+  const control = { cancelRequested: false };
+  activeRuns.set(runId, control);
 
   try {
     const run = await ProcessingRun.findOne({ runId }).lean();
     if (!run) throw new Error(`Run ${runId} was not found`);
+    if (run.state === 'cancelled') return;
+    if (control.cancelRequested || run.state === 'cancelling') {
+      await finalizeCancelledRun(runId);
+      return;
+    }
 
     let emailIds = run.emailIds;
     if (!retryOnly || emailIds.length === 0) {
       const imported = await importDataset({ runId });
       emailIds = imported.emailIds;
+    }
+    if (control.cancelRequested) {
+      await finalizeCancelledRun(runId);
+      return;
     }
 
     const query = { emailId: { $in: emailIds } };
@@ -189,18 +211,29 @@ export async function executeRun(runId, { retryOnly = false } = {}) {
         },
         runErrors: [],
         startedAt: new Date(),
-        completedAt: null
+        completedAt: null,
+        cancellationRequestedAt: null,
+        cancelledAt: null
       }
     });
 
     await seedEmailCategoryPhrases();
     await seedDocumentKnowledge();
+    if (control.cancelRequested) {
+      await finalizeCancelledRun(runId);
+      return;
+    }
     const phraseEntries = await loadActiveEmailPhrases();
     const repository = createDatasetRepository(defaultDatasetPath());
     const concurrency = Number.parseInt(process.env.PROCESSING_CONCURRENCY ?? '4', 10);
     await runWithConcurrency(emails, Number.isInteger(concurrency) ? concurrency : 4, (email) => (
       processOneEmail(email, repository, runId, { phraseEntries }, { retry: retryOnly })
-    ));
+    ), { shouldStop: () => control.cancelRequested });
+
+    if (control.cancelRequested) {
+      await finalizeCancelledRun(runId);
+      return;
+    }
 
     const completedRun = await ProcessingRun.findOne({ runId }).lean();
     await ProcessingRun.updateOne({ runId }, {
@@ -250,13 +283,57 @@ export async function startRun({ source = 'bundle' } = {}) {
 export async function retryRun(runId) {
   const run = await ProcessingRun.findOne({ runId });
   if (!run) return null;
-  if (activeRuns.has(runId) || ['queued', 'running'].includes(run.state)) {
+  if (activeRuns.has(runId) || ['queued', 'running', 'cancelling'].includes(run.state)) {
     const error = new Error('Run is already active');
     error.statusCode = 409;
     throw error;
   }
   run.state = 'queued';
+  run.cancellationRequestedAt = null;
+  run.cancelledAt = null;
   await run.save();
   launchRun(runId, { retryOnly: true });
   return run.toObject();
+}
+
+export async function cancelRun(runId, {
+  runModel = ProcessingRun,
+  auditModel = AuditEvent
+} = {}) {
+  const run = await runModel.findOne({ runId }).lean();
+  if (!run) return null;
+  if (!['queued', 'running', 'cancelling'].includes(run.state)) {
+    const error = new Error('Only an active run can be stopped');
+    error.code = 'RUN_NOT_ACTIVE';
+    error.statusCode = 409;
+    error.retryable = false;
+    throw error;
+  }
+
+  const requestedAt = new Date();
+  const control = activeRuns.get(runId);
+  if (control) control.cancelRequested = true;
+  const nextState = control ? 'cancelling' : 'cancelled';
+  const update = {
+    state: nextState,
+    cancellationRequestedAt: requestedAt,
+    ...(control ? {} : { cancelledAt: requestedAt, completedAt: requestedAt })
+  };
+  const updated = await runModel.findOneAndUpdate(
+    { runId, state: { $in: ['queued', 'running', 'cancelling'] } },
+    { $set: update },
+    { new: true }
+  ).lean();
+  if (!updated) {
+    const error = new Error('Run state changed before it could be stopped');
+    error.code = 'RUN_STATE_CONFLICT';
+    error.statusCode = 409;
+    error.retryable = true;
+    throw error;
+  }
+  await auditModel.create({
+    eventType: 'run.cancellation_requested', entityType: 'run', entityId: runId, runId,
+    details: { previousState: run.state }
+  });
+  return updated;
 }

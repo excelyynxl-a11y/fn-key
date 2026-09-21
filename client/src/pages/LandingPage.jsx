@@ -17,6 +17,8 @@ import ReviewHistory from '../components/ReviewHistory.jsx';
 import ReviewQueue from '../components/ReviewQueue.jsx';
 import { request } from '../services/api.js';
 
+const terminalRunStates = ['completed', 'completed_with_errors', 'cancelled'];
+
 const LandingPage = () => {
   const [run, setRun] = useState(null);
   const [emails, setEmails] = useState([]);
@@ -26,6 +28,7 @@ const LandingPage = () => {
   const [emailMeta, setEmailMeta] = useState({ page: 1, limit: 50, total: 0 });
   const [page, setPage] = useState(1);
   const [retrying, setRetrying] = useState(false);
+  const [cancelling, setCancelling] = useState(false);
   const [offline, setOffline] = useState(false);
   const [reviews, setReviews] = useState([]);
   const [reviewMeta, setReviewMeta] = useState({ total: 0, grouped: {} });
@@ -58,7 +61,7 @@ const LandingPage = () => {
   const refreshRun = useCallback(async (runId) => {
     const response = await request(`/api/runs/${runId}`);
     setRun(response.data);
-    if (['completed', 'completed_with_errors'].includes(response.data.state)) {
+    if (terminalRunStates.includes(response.data.state)) {
       await loadEmails(runId, appliedFilters, page);
       await loadReviews(runId);
     }
@@ -70,7 +73,7 @@ const LandingPage = () => {
       .then(async (response) => {
         if (cancelled || response.data.length === 0) return;
         setRun(response.data[0]);
-        if (['completed', 'completed_with_errors'].includes(response.data[0].state)) {
+        if (terminalRunStates.includes(response.data[0].state)) {
           await loadEmails(response.data[0].runId, emptyInboxFilters, 1);
           await loadReviews(response.data[0].runId);
         }
@@ -86,7 +89,7 @@ const LandingPage = () => {
   }, [loadEmails, loadReviews]);
 
   useEffect(() => {
-    if (!run || !['queued', 'running'].includes(run.state)) return undefined;
+    if (!run || !['queued', 'running', 'cancelling'].includes(run.state)) return undefined;
     const timer = window.setInterval(() => {
       refreshRun(run.runId).catch((refreshError) => setError(refreshError.message));
     }, 1200);
@@ -162,6 +165,19 @@ const LandingPage = () => {
     }
   }
 
+  async function cancelRun() {
+    setCancelling(true);
+    setError('');
+    try {
+      const response = await request(`/api/runs/${run.runId}/cancel`, { method: 'POST' });
+      setRun(response.data);
+    } catch (cancelError) {
+      setError(cancelError.message);
+    } finally {
+      setCancelling(false);
+    }
+  }
+
   async function exportSubmission() {
     try {
       const submission = await request(`/api/runs/${run.runId}/submission`);
@@ -197,10 +213,10 @@ const LandingPage = () => {
           <button
             type="button"
             onClick={startRun}
-            disabled={busy || ['queued', 'running'].includes(run?.state)}
+            disabled={busy || ['queued', 'running', 'cancelling'].includes(run?.state)}
             className="inline-flex items-center gap-2 rounded-md bg-blue-600 px-5 py-3 text-sm font-semibold text-white shadow-sm transition hover:bg-blue-500 disabled:cursor-not-allowed disabled:bg-blue-900 disabled:text-blue-300/60"
           >
-            {['queued', 'running'].includes(run?.state)
+            {['queued', 'running', 'cancelling'].includes(run?.state)
               ? <><LoaderCircle className="size-4 animate-spin" /> Processing…</>
               : <><Play className="size-4" /> Start new run</>}
           </button>
@@ -214,13 +230,13 @@ const LandingPage = () => {
         )}
         {busy && !run && <p className="mt-10 text-sm text-blue-300/60">Loading workspace…</p>}
 
-        {run && <div className="mt-8"><RunProgress run={run} onFilter={applySummaryFilter} onRetry={retryRun} retrying={retrying} onExport={exportSubmission} /></div>}
+        {run && <div className="mt-8"><RunProgress run={run} onFilter={applySummaryFilter} onRetry={retryRun} retrying={retrying} onExport={exportSubmission} onCancel={cancelRun} cancelling={cancelling} /></div>}
 
-        {run && ['completed', 'completed_with_errors'].includes(run.state) && (
+        {run && terminalRunStates.includes(run.state) && (
           <div className="mt-4"><ReviewQueue reviews={reviews} grouped={reviewMeta.grouped} onSelect={selectEmail} selectedEmailId={selectedEmail?.emailId} /></div>
         )}
-        {run && ['completed', 'completed_with_errors'].includes(run.state) && <KnowledgePanel />}
-        {run && ['completed', 'completed_with_errors'].includes(run.state) && (
+        {run && terminalRunStates.includes(run.state) && <KnowledgePanel />}
+        {run && terminalRunStates.includes(run.state) && (
           <MetricsPanel runId={run.runId} refreshKey={run.updatedAt ?? run.completedAt} />
         )}
 
@@ -231,7 +247,7 @@ const LandingPage = () => {
           </section>
         )}
 
-        {run && ['completed', 'completed_with_errors'].includes(run.state) && (
+        {run && terminalRunStates.includes(run.state) && (
           <div className="mt-8 grid gap-6 xl:grid-cols-[minmax(360px,0.8fr)_minmax(0,1.5fr)]">
             <div className="space-y-3">
               <InboxFilters

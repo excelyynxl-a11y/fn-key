@@ -7,6 +7,8 @@ const styles = {
   completed: 'border-emerald-800 bg-emerald-500/10 text-emerald-300',
   completed_with_errors: 'border-amber-800 bg-amber-500/10 text-amber-300',
   running: 'border-blue-800 bg-blue-500/10 text-blue-300',
+  cancelling: 'border-amber-800 bg-amber-500/10 text-amber-300',
+  cancelled: 'border-slate-700 bg-slate-500/10 text-slate-300',
   queued: 'border-blue-800 bg-blue-950/70 text-blue-300',
   failed: 'border-rose-800 bg-rose-500/10 text-rose-300'
 };
@@ -18,6 +20,8 @@ const icons = {
   completed: CircleCheck,
   completed_with_errors: TriangleAlert,
   running: LoaderCircle,
+  cancelling: LoaderCircle,
+  cancelled: CircleX,
   queued: Clock,
   failed: CircleX
 };
@@ -27,7 +31,7 @@ export default function StatusBadge({ value }) {
   const Icon = icons[value] ?? CircleAlert;
   return (
     <span className={`inline-flex items-center gap-1 rounded-md border px-2.5 py-1 text-xs font-semibold ${styles[value] ?? 'border-blue-800 bg-blue-950/70 text-blue-300'}`}>
-      <Icon className={`size-3.5 ${value === 'running' ? 'animate-spin' : ''}`} aria-hidden="true" />
+      <Icon className={`size-3.5 ${['running', 'cancelling'].includes(value) ? 'animate-spin' : ''}`} aria-hidden="true" />
       {value.replaceAll('_', ' ')}
     </span>
   );

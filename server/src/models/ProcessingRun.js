@@ -22,7 +22,7 @@ const processingRunSchema = new mongoose.Schema({
   source: { type: String, required: true, default: 'bundle' },
   state: {
     type: String,
-    enum: ['queued', 'running', 'completed', 'completed_with_errors', 'failed'],
+    enum: ['queued', 'running', 'cancelling', 'cancelled', 'completed', 'completed_with_errors', 'failed'],
     default: 'queued',
     index: true
   },
@@ -32,6 +32,8 @@ const processingRunSchema = new mongoose.Schema({
   metrics: { type: mongoose.Schema.Types.Mixed, default: null },
   startedAt: { type: Date, default: null },
   completedAt: { type: Date, default: null },
+  cancellationRequestedAt: { type: Date, default: null },
+  cancelledAt: { type: Date, default: null },
   runErrors: [{
     emailId: { type: String, default: null },
     code: { type: String, required: true },

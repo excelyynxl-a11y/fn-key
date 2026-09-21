@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { Download, RotateCcw, Timer } from 'lucide-react';
+import { Download, RotateCcw, Square, Timer } from 'lucide-react';
 import StatusBadge from './StatusBadge.jsx';
 
 function elapsedLabel(startedAt, completedAt, now) {
@@ -9,7 +9,7 @@ function elapsedLabel(startedAt, completedAt, now) {
   return `${Math.floor(seconds / 60)}m ${seconds % 60}s`;
 }
 
-export default function RunProgress({ run, onFilter, onRetry, retrying, onExport }) {
+export default function RunProgress({ run, onFilter, onRetry, retrying, onExport, onCancel, cancelling }) {
   const [now, setNow] = useState(Date.now());
   useEffect(() => {
     if (run.completedAt) return undefined;
@@ -31,6 +31,11 @@ export default function RunProgress({ run, onFilter, onRetry, retrying, onExport
         <div className="flex items-center gap-3">
           <span className="inline-flex items-center gap-1 text-xs text-blue-300/60"><Timer className="size-3.5" /> Elapsed {elapsedLabel(run.startedAt, run.completedAt, now)}</span>
           <StatusBadge value={run.state} />
+          {['queued', 'running', 'cancelling'].includes(run.state) && (
+            <button type="button" disabled={cancelling || run.state === 'cancelling'} onClick={onCancel} className="inline-flex items-center gap-1.5 rounded-md border border-rose-800 bg-rose-950/40 px-3 py-1.5 text-xs font-semibold text-rose-200 hover:bg-rose-900/50 disabled:opacity-50">
+              <Square className="size-3.5" /> {cancelling || run.state === 'cancelling' ? 'Stopping…' : 'Stop process'}
+            </button>
+          )}
           {['completed', 'completed_with_errors'].includes(run.state) && (
             <button type="button" onClick={onExport} className="inline-flex items-center gap-1.5 rounded-md bg-blue-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-blue-500"><Download className="size-3.5" /> Export JSON</button>
           )}

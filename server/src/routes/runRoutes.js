@@ -1,5 +1,6 @@
 import express from 'express';
 import {
+  cancelRunController,
   exportSubmissionController,
   getRunController,
   getRunMetricsController,
@@ -15,6 +16,7 @@ router.get('/', listRunsController);
 router.get('/:runId', getRunController);
 router.get('/:runId/metrics', getRunMetricsController);
 router.post('/:runId/retry', retryRunController);
+router.post('/:runId/cancel', cancelRunController);
 router.get('/:runId/submission', exportSubmissionController);
 
 export default router;

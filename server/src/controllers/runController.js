@@ -3,7 +3,7 @@ import Email from '../models/Email.js';
 import ProcessingRun from '../models/ProcessingRun.js';
 import { buildSubmission } from '../services/submissionService.js';
 import { metricsForRun } from '../services/metricsService.js';
-import { retryRun, startRun } from '../services/runService.js';
+import { cancelRun, retryRun, startRun } from '../services/runService.js';
 
 const startRunSchema = z.object({
   source: z.literal('bundle').default('bundle')
@@ -12,7 +12,7 @@ const startRunSchema = z.object({
 const paginationSchema = z.object({
   page: z.coerce.number().int().positive().default(1),
   limit: z.coerce.number().int().positive().max(100).default(20),
-  status: z.enum(['queued', 'running', 'completed', 'completed_with_errors', 'failed']).optional()
+  status: z.enum(['queued', 'running', 'cancelling', 'cancelled', 'completed', 'completed_with_errors', 'failed']).optional()
 });
 
 export async function startRunController(req, res) {
@@ -71,4 +71,10 @@ export async function getRunMetricsController(req, res) {
   if (!run) return res.status(404).json({ data: null, error: { code: 'RUN_NOT_FOUND', message: 'Run not found', retryable: false }, meta: {} });
   const metrics = await metricsForRun(run);
   return res.json({ data: metrics, error: null, meta: { runId: run.runId } });
+}
+
+export async function cancelRunController(req, res) {
+  const run = await cancelRun(req.params.runId);
+  if (!run) return res.status(404).json({ data: null, error: { code: 'RUN_NOT_FOUND', message: 'Run not found', retryable: false }, meta: {} });
+  return res.json({ data: run, error: null, meta: {} });
 }
