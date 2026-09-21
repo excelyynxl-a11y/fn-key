@@ -1,6 +1,6 @@
 # FN Key - MERN development environment
 
-SDOC is an adaptive shipping-document verification application built on React, Express, and MongoDB. Stage 1 imports the 520-email challenge bundle, applies deterministic baseline classification, parses plain-text SI/BL pairs, extracts and normalizes the seven required fields, compares them, records review reasons, and exports the exact submission JSON shape. The dashboard shows batch progress, inbox results, side-by-side values, and source-line evidence.
+SDOC is an adaptive shipping-document verification application built on React, Express, and MongoDB. Stage 2 imports the 520-email challenge bundle, scores versioned category phrases, sends only uncertain cases through a strict structured AI fallback, safely learns probation phrases, and caches validated AI decisions. The existing document flow parses plain-text SI/BL pairs, compares the seven required fields, records review reasons, and exports the exact submission JSON shape.
 
 ## Stack and prerequisites
 
@@ -22,8 +22,9 @@ Create a root `.env` containing a reachable MongoDB URI before starting. The fir
 
 ```dotenv
 MONGO_URI=mongodb+srv://<user>:<password>@<cluster>/<database>
-# Required from Stage 2 onward, optional for the Stage 1 deterministic flow.
+# Required when a message falls below the deterministic classification thresholds.
 OPENAI_API_KEY=
+OPENAI_MODEL=gpt-5.5
 ```
 
 - Frontend: http://localhost:5173
@@ -32,13 +33,15 @@ OPENAI_API_KEY=
 
 Host ports bind to loopback for local development. The backend uses `MONGO_URI` to connect to MongoDB Atlas or another reachable MongoDB deployment. Browser JavaScript uses the host API URL, because the browser cannot resolve Compose service names. The challenge bundle is mounted read-only at `/data/sdoc` inside the API container.
 
-## Stage 1 workflow
+## Stage 2 workflow
 
 1. Open http://localhost:5173.
 2. Select **Start new run**.
-3. The API imports all bundle emails with idempotent upserts and processes them with a concurrency limit.
-4. Select an inbox row to inspect its classification, status, seven-field comparison, and line evidence.
+3. The API seeds the phrase knowledge base idempotently, scores every email, and uses the structured AI fallback only when the score or lead is insufficient.
+4. Select an inbox row to inspect category scores, matched phrases, confidence, decision method, status, and comparison evidence.
 5. Download a completed run's exact submission object from `GET /api/runs/:runId/submission`.
+
+AI evidence must occur verbatim in the email. New phrases are rejected when they are generic, sensitive, shipment-specific, too long, or conflicting; accepted phrases begin in low-weight probation. Repeated runs reuse the hash cache and do not count the same email twice as independent phrase support.
 
 Implemented API paths:
 
@@ -65,10 +68,11 @@ docker compose ps                   # Show service health
 docker compose config --quiet       # Validate configuration
 ```
 
-Run the focused Stage 1 checks from the repository root:
+Run the focused checks and the manually labeled classification evaluation from the repository root:
 
 ```sh
 cd server && npm test
+npm run evaluate:classification
 cd ../client && npm run build
 ```
 
@@ -98,7 +102,12 @@ Compose reads a root `.env` and explicitly passes configuration to containers. K
 | `CLIENT_ORIGIN` | `http://localhost:5173` | Allowed browser origin for CORS |
 | `VITE_API_URL` | `http://localhost:5000` | API URL used by the browser |
 | `WATCH_USE_POLLING` | `true` | Vite polling for mounted files |
-| `OPENAI_API_KEY` | Empty | Reserved for the Stage 2 AI fallback |
+| `OPENAI_API_KEY` | Empty | Used only for uncertain email classifications |
+| `OPENAI_MODEL` | `gpt-5.5` | Configurable Responses API model |
+| `OPENAI_MAX_ATTEMPTS` | `3` | Maximum structured-AI attempts for transient failures |
+| `OPENAI_TIMEOUT_MS` | `20000` | Timeout per AI attempt in milliseconds |
+| `CLASSIFICATION_MIN_SCORE` | `4` | Minimum deterministic winning score |
+| `CLASSIFICATION_MIN_MARGIN` | `1.5` | Minimum lead over the second category |
 | `PROCESSING_CONCURRENCY` | `4` | Maximum emails processed concurrently |
 | `DATASET_PATH` | `/data/sdoc` in Compose | Read-only challenge bundle location |
 
@@ -114,7 +123,7 @@ Email records, processing runs, extracted fields, and comparison results are per
 client/
   src/
     components/          # Run progress, inbox, status and comparison UI
-    pages/               # Stage 1 dashboard
+    pages/               # Stage 2 dashboard
     services/api.js      # Shared fetch helper
     App.jsx
     main.jsx
@@ -129,11 +138,11 @@ server/
     constants/           # Challenge enums and pipeline version
     controllers/         # Run and email APIs
     middleware/
-    models/              # Email and ProcessingRun persistence
+    models/              # Email, run, knowledge, AI cache and audit persistence
     repositories/        # Safe dataset access
     routes/
     schemas/             # Zod request/output contracts
-    services/            # Import, pipeline, comparison, run and export logic
+    services/            # Import, adaptive classification, learning, comparison, run and export logic
     app.js
   server.js
   nodemon.json
