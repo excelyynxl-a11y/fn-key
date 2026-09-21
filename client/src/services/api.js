@@ -1,9 +1,10 @@
-const apiUrl = import.meta.env.VITE_API_URL;
+// A separate API URL remains available for local development. Production uses
+// the current origin so the React app and API can ship in one container.
+const apiUrl = (import.meta.env.VITE_API_URL ?? '').replace(/\/$/, '');
 
 // Paths are relative to the API root, for example request('/').
 export async function request(path, options = {}) {
-  if (!apiUrl) throw new Error('VITE_API_URL is required');
-  const response = await fetch(`${apiUrl.replace(/\/$/, '')}/${path.replace(/^\//, '')}`, options);
+  const response = await fetch(`${apiUrl}/${path.replace(/^\//, '')}`, options);
   if (response.status === 204) return null;
 
   const body = await response.json().catch(() => null);

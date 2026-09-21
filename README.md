@@ -35,6 +35,61 @@ OPENAI_MODEL=gpt-5.5
 
 Host ports bind to loopback for local development. The backend uses `MONGO_URI` to connect to MongoDB Atlas or another reachable MongoDB deployment. Browser JavaScript uses the host API URL, because the browser cannot resolve Compose service names. The challenge bundle is mounted read-only at `/data/sdoc` inside the API container.
 
+## Deploy one Docker service on Render
+
+The root [`Dockerfile`](Dockerfile) is the production image. It builds the React client, installs only the server's production dependencies, copies the challenge dataset into the image, and runs one Express process that serves both the UI and `/api`. The development Dockerfiles under `client/` and `server/` remain dedicated to the local Compose workflow.
+
+### 1. Prepare MongoDB Atlas
+
+1. Create an Atlas cluster and a database user with a unique application password.
+2. Copy the Node.js SRV connection string and include a database name, for example `mongodb+srv://USER:PASSWORD@HOST/sdoc?retryWrites=true&w=majority`.
+3. In Atlas **Network Access**, add all outbound CIDR ranges shown under the Render service's **Connect > Outbound** tab. For a short-lived demo, `0.0.0.0/0` is simpler but less restrictive.
+
+### 2. Create the Render service
+
+1. Push the repository and the root `Dockerfile` to the branch you want to deploy.
+2. In Render select **New > Web Service**, connect the repository, and select that branch.
+3. Set **Language** to **Docker** and **Dockerfile Path** to `./Dockerfile`. Keep the repository root as the Docker build context.
+4. Do not add a build command, start command, or Docker command override. The image's `CMD` starts the API.
+5. Choose a service name before setting `CLIENT_ORIGIN`. For a service named `sdoc-demo`, the initial origin is `https://sdoc-demo.onrender.com`.
+6. Under **Advanced**, set **Health Check Path** to `/health`.
+
+### 3. Add environment variables
+
+Set these before the first deploy:
+
+| Variable | Required | Render value |
+| --- | --- | --- |
+| `MONGO_URI` | Yes | Full MongoDB Atlas SRV connection string, including the database name |
+| `CLIENT_ORIGIN` | Yes | Exact public origin, such as `https://sdoc-demo.onrender.com`; no trailing slash |
+| `OPENAI_API_KEY` | Recommended | OpenAI project API key; without it, unresolved AI fallbacks become review cases |
+| `OPENAI_MODEL` | Recommended | Model available to the API project; defaults to `gpt-5.5` |
+| `PROCESSING_CONCURRENCY` | Optional | `4`; use `2` on a memory-constrained instance |
+| `OPENAI_MAX_ATTEMPTS` | Optional | `3` |
+| `OPENAI_TIMEOUT_MS` | Optional | `20000` |
+| `API_RATE_LIMIT_MAXIMUM` | Optional | `300` |
+| `API_RATE_LIMIT_WINDOW_MS` | Optional | `60000` |
+| `JSON_BODY_LIMIT` | Optional | `1mb` |
+| `CLASSIFICATION_MIN_SCORE` | Optional | `4` |
+| `CLASSIFICATION_MIN_MARGIN` | Optional | `1.5` |
+| `OPENAI_INPUT_COST_PER_MILLION` | Optional | Current input-token price, or `0` to disable estimates |
+| `OPENAI_OUTPUT_COST_PER_MILLION` | Optional | Current output-token price, or `0` to disable estimates |
+
+Do **not** set `PORT`: Render injects it and the server already binds it on `0.0.0.0`. Do not set `VITE_API_URL`, `DATASET_PATH`, `CLIENT_DIST_PATH`, or `NODE_ENV` for this deployment; the production image supplies the correct same-origin and internal-path configuration. Never put the OpenAI or MongoDB secret into a `VITE_` variable.
+
+If a custom domain is added later, set `CLIENT_ORIGIN` to a comma-separated exact allowlist containing every browser origin that should work, for example `https://docs.example.com,https://sdoc-demo.onrender.com`, then redeploy.
+
+### 4. Deploy and verify
+
+Create the service and watch the build logs. A healthy deployment should satisfy:
+
+- `/health` returns `200` with `{"status":"ok"}` after MongoDB connects.
+- `/` serves the React application.
+- `/api` returns the API identity envelope.
+- Starting a run can read the bundled dataset and write results to Atlas.
+
+The filesystem is intentionally disposable: durable application state is stored in MongoDB, while the read-only challenge dataset is rebuilt into every image. A persistent Render disk is not required. Processing runs execute inside the web process; avoid deploying or restarting while a run is active. A paid always-on instance is preferable for long runs because sleeping or restarting an instance interrupts in-memory work, even though completed records remain in MongoDB.
+
 ## Operations workflow
 
 1. Open http://localhost:5173.
@@ -132,7 +187,7 @@ Compose reads a root `.env` and explicitly passes configuration to containers. K
 | `CLIENT_PORT` | `5173` | Frontend host port |
 | `MONGO_URI` | Required | MongoDB Atlas or other reachable MongoDB connection string |
 | `CLIENT_ORIGIN` | `http://localhost:5173` | Allowed browser origin for CORS |
-| `VITE_API_URL` | `http://localhost:5000` | API URL used by the browser |
+| `VITE_API_URL` | `http://localhost:5000` in Compose; same origin when omitted | Optional separate API URL used by the browser |
 | `WATCH_USE_POLLING` | `true` | Vite polling for mounted files |
 | `OPENAI_API_KEY` | Empty | Used only for uncertain classifications, document roles, or fields |
 | `OPENAI_MODEL` | `gpt-5.5` | Configurable Responses API model |
@@ -148,7 +203,7 @@ Compose reads a root `.env` and explicitly passes configuration to containers. K
 | `PROCESSING_CONCURRENCY` | `4` | Maximum emails processed concurrently |
 | `DATASET_PATH` | `/data/sdoc` in Compose | Read-only challenge bundle location |
 
-If changing `PORT`, also update `VITE_API_URL`. If changing `CLIENT_PORT`, update `CLIENT_ORIGIN`. Run `docker compose up -d` after changing root environment values so containers are recreated with the new settings. Vite exposes `VITE_` variables to the browser: never place secrets in them. The backend also supports dotenv for optional direct Node execution; Docker supplies its environment through Compose.
+For the local Compose stack, if changing `PORT`, also update `VITE_API_URL`; if changing `CLIENT_PORT`, update `CLIENT_ORIGIN`. Run `docker compose up -d` after changing root environment values so containers are recreated with the new settings. Vite exposes `VITE_` variables to the browser: never place secrets in them. The backend also supports dotenv for optional direct Node execution; Docker supplies its environment through Compose.
 
 ## MongoDB and persistence
 
@@ -195,6 +250,7 @@ server/
   package.json
   package-lock.json
 docker-compose.yml
+Dockerfile                  # Single-container production image for Render
 .gitignore
 README.md
 ```
@@ -211,4 +267,4 @@ Empty extension directories contain `.gitkeep` only. Both apps have `.dockerigno
 - **CORS errors:** `CLIENT_ORIGIN` must exactly match the browser's origin, including scheme and port. Use `localhost` consistently.
 - **Image download/build failures:** check internet access, proxy settings and available disk space; rerun `docker compose up --build`.
 
-This Compose stack and its Dockerfiles are for development. A production deployment needs a built/static frontend, a production API image, secret management, database access control and a deployment-specific network configuration.
+The Compose stack and the Dockerfiles inside `client/` and `server/` are for development. Use the root production `Dockerfile` and the Render configuration above for a single-service deployment.

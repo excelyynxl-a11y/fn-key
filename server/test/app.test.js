@@ -1,4 +1,7 @@
 import assert from 'node:assert/strict';
+import { mkdtemp, rm, writeFile } from 'node:fs/promises';
+import os from 'node:os';
+import path from 'node:path';
 import test from 'node:test';
 import { createApp } from '../src/app.js';
 
@@ -69,4 +72,22 @@ test('returns a consistent not-found envelope', async () => {
     const body = await response.json();
     assert.equal(body.error.code, 'NOT_FOUND');
   });
+});
+
+test('serves the production client and preserves API 404 responses', async () => {
+  const clientDistPath = await mkdtemp(path.join(os.tmpdir(), 'sdoc-client-'));
+  await writeFile(path.join(clientDistPath, 'index.html'), '<!doctype html><title>SDOC</title><div id="root"></div>');
+  try {
+    await withServer(async (baseUrl) => {
+      const pageResponse = await fetch(`${baseUrl}/inbox`);
+      assert.equal(pageResponse.status, 200);
+      assert.match(await pageResponse.text(), /<title>SDOC<\/title>/);
+
+      const apiResponse = await fetch(`${baseUrl}/api/unknown`);
+      assert.equal(apiResponse.status, 404);
+      assert.equal((await apiResponse.json()).error.code, 'NOT_FOUND');
+    }, { clientDistPath });
+  } finally {
+    await rm(clientDistPath, { recursive: true, force: true });
+  }
 });
