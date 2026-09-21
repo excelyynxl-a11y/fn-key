@@ -56,6 +56,38 @@ The basic use case remains the same at every stage: find the document request, c
 
 The dataset contains inbox records in JSON, together with the SI and BL attachments referenced by those emails. The answer key is not included. You can check your result using the self-evaluation endpoint described below.
 
+## Categorisation
+Build a pipeline that reads this inbox and, for each email, decides:
+
+1. **category** — one of `BL_COMPARISON`, `SI_REQUEST`, `INVOICE_QUERY`,
+   `GENERAL`, `SPAM`.
+2. for `BL_COMPARISON` emails, compare the **Shipping Instruction (SI)** against
+   the **draft Bill of Lading (BL)** attachments and report the outcome:
+   - `status`: `OK` (all 7 fields match), `MISMATCH` (≥1 field differs), or
+     `NEEDS_REVIEW` (you cannot decide — unreadable/missing/wrong document).
+   - `has_defect` + `defect_fields` when it's a `MISMATCH`.
+   - `review_reason` when it's `NEEDS_REVIEW`
+     (`wrong_doc_type` | `missing_attachment` | `unreadable` | `missing_value`).
+
+The 7 compared fields: **shipper, consignee, notify_party, port_of_loading,
+port_of_discharge, container_count, gross_weight_kg**. Note the SI and BL often
+*label the same field differently* (`Port of Loading` vs `Load Port`) — align by
+meaning, not by header text.
+
+## Scoring
+
+You don't have the ground truth. Either:
+- the organizers run `score_cli.py submission.json` for you, **or**
+- if they gave you the HTTP server URL:
+  ```python
+  inbox = Inbox("http://<host>:8080")
+  print(inbox.submit(submission)["final_score"])
+  ```
+
+Final score = 50% end-to-end (defects caught all the way through) + 30% Stage-1
+macro-F1 + 20% Stage-3 defect-F1. `NEEDS_REVIEW` handling is reported as a
+separate reliability axis.
+
 ### Two ways to access the data
 
 | Option | How you use it |
