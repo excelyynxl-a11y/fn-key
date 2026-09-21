@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { Download, RotateCcw, Timer } from 'lucide-react';
 import StatusBadge from './StatusBadge.jsx';
 
 function elapsedLabel(startedAt, completedAt, now) {
@@ -21,29 +22,29 @@ export default function RunProgress({ run, onFilter, onRetry, retrying, onExport
   const percentage = total === 0 ? 0 : Math.round((finished / total) * 100);
 
   return (
-    <section className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+    <section className="rounded-lg border border-blue-900/60 bg-[#0a1526] p-5 shadow-sm">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
-          <p className="text-xs font-semibold uppercase tracking-[0.18em] text-blue-600">Processing run</p>
-          <p className="mt-1 font-mono text-xs text-slate-500">{run.runId}</p>
+          <p className="text-xs font-semibold uppercase tracking-[0.18em] text-blue-500">Processing run</p>
+          <p className="mt-1 font-mono text-xs text-blue-400/70">{run.runId}</p>
         </div>
         <div className="flex items-center gap-3">
-          <span className="text-xs text-slate-500">Elapsed {elapsedLabel(run.startedAt, run.completedAt, now)}</span>
+          <span className="inline-flex items-center gap-1 text-xs text-blue-300/60"><Timer className="size-3.5" /> Elapsed {elapsedLabel(run.startedAt, run.completedAt, now)}</span>
           <StatusBadge value={run.state} />
           {['completed', 'completed_with_errors'].includes(run.state) && (
-            <button type="button" onClick={onExport} className="rounded-lg bg-blue-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-blue-700">Export JSON</button>
+            <button type="button" onClick={onExport} className="inline-flex items-center gap-1.5 rounded-md bg-blue-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-blue-500"><Download className="size-3.5" /> Export JSON</button>
           )}
           {['completed', 'completed_with_errors', 'failed'].includes(run.state) && ((counts.review ?? 0) > 0 || (counts.failed ?? 0) > 0) && (
-            <button type="button" disabled={retrying} onClick={onRetry} className="rounded-lg border border-blue-200 px-3 py-1.5 text-xs font-semibold text-blue-700 hover:bg-blue-50 disabled:opacity-50">
-              {retrying ? 'Retrying…' : 'Retry review/failed'}
+            <button type="button" disabled={retrying} onClick={onRetry} className="inline-flex items-center gap-1.5 rounded-md border border-blue-800 bg-blue-950/50 px-3 py-1.5 text-xs font-semibold text-blue-200 hover:bg-blue-900/50 disabled:opacity-50">
+              <RotateCcw className={`size-3.5 ${retrying ? 'animate-spin' : ''}`} /> {retrying ? 'Retrying…' : 'Retry review/failed'}
             </button>
           )}
         </div>
       </div>
-      <div className="mt-5 h-2 overflow-hidden rounded-full bg-slate-100">
-        <div className="h-full rounded-full bg-blue-600 transition-all" style={{ width: `${percentage}%` }} />
+      <div className="mt-5 h-2 overflow-hidden rounded-sm bg-blue-950">
+        <div className="h-full rounded-sm bg-blue-600 transition-all" style={{ width: `${percentage}%` }} />
       </div>
-      <div className="mt-2 flex justify-between text-sm text-slate-600">
+      <div className="mt-2 flex justify-between text-sm text-blue-300/70">
         <span>{finished} of {total} emails</span>
         <span>{percentage}%</span>
       </div>
@@ -57,9 +58,9 @@ export default function RunProgress({ run, onFilter, onRetry, retrying, onExport
           ['Failed', counts.failed ?? 0, { processingState: 'failed' }],
           ['AI fallback', counts.aiFallbacks ?? counts.aiClassified ?? 0, { method: 'ai' }]
         ].map(([label, value, filter]) => (
-          <button type="button" onClick={() => onFilter(filter)} key={label} className="rounded-xl bg-slate-50 p-3 text-left transition hover:bg-blue-50 focus:outline-none focus:ring-2 focus:ring-blue-500">
-            <span className="block text-xs text-slate-500">{label}</span>
-            <strong className="mt-1 block text-xl font-semibold text-slate-900">{value}</strong>
+          <button type="button" onClick={() => onFilter(filter)} key={label} className="rounded-md bg-blue-950/50 p-3 text-left ring-1 ring-blue-900/60 transition hover:bg-blue-900/40 focus:outline-none focus:ring-2 focus:ring-blue-500">
+            <span className="block text-xs text-blue-300/60">{label}</span>
+            <strong className="mt-1 block text-xl font-semibold text-white">{value}</strong>
           </button>
         ))}
       </div>

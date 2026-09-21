@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useState } from 'react';
+import { LoaderCircle, Play } from 'lucide-react';
 import EmailTable from '../components/EmailTable.jsx';
 import AttachmentSummary from '../components/AttachmentSummary.jsx';
 import ClassificationEvidence from '../components/ClassificationEvidence.jsx';
@@ -189,27 +190,29 @@ const LandingPage = () => {
       <main className="min-w-0 flex-1 px-4 py-6 sm:px-8 lg:px-10">
         <header className="flex flex-wrap items-center justify-between gap-4">
           <div>
-            <p className="text-sm font-semibold text-blue-600">Adaptive shipping document verification</p>
-            <h1 className="mt-1 text-3xl font-bold tracking-tight text-slate-950">Inbox processing dashboard</h1>
-            <p className="mt-2 text-sm text-slate-600">Import the challenge bundle, compare SI and BL fields, and inspect every decision.</p>
+            <p className="text-sm font-semibold text-blue-500">Adaptive shipping document verification</p>
+            <h1 className="mt-1 text-3xl font-bold tracking-tight text-white">Inbox processing dashboard</h1>
+            <p className="mt-2 text-sm text-blue-300/70">Import the challenge bundle, compare SI and BL fields, and inspect every decision.</p>
           </div>
           <button
             type="button"
             onClick={startRun}
             disabled={busy || ['queued', 'running'].includes(run?.state)}
-            className="rounded-xl bg-blue-600 px-5 py-3 text-sm font-semibold text-white shadow-sm transition hover:bg-blue-700 disabled:cursor-not-allowed disabled:bg-slate-400"
+            className="inline-flex items-center gap-2 rounded-md bg-blue-600 px-5 py-3 text-sm font-semibold text-white shadow-sm transition hover:bg-blue-500 disabled:cursor-not-allowed disabled:bg-blue-900 disabled:text-blue-300/60"
           >
-            {['queued', 'running'].includes(run?.state) ? 'Processing…' : 'Start new run'}
+            {['queued', 'running'].includes(run?.state)
+              ? <><LoaderCircle className="size-4 animate-spin" /> Processing…</>
+              : <><Play className="size-4" /> Start new run</>}
           </button>
         </header>
 
-        {error && <div className="mt-6 rounded-xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700">{offline ? 'Offline: ' : ''}{error}</div>}
+        {error && <div className="mt-6 rounded-md border border-rose-900/60 bg-rose-950/40 px-4 py-3 text-sm text-rose-300">{offline ? 'Offline: ' : ''}{error}</div>}
         {run?.runErrors?.length > 0 && (
-          <div className="mt-4 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800">
+          <div className="mt-4 rounded-md border border-amber-900/60 bg-amber-950/40 px-4 py-3 text-sm text-amber-300">
             Partial errors: {run.runErrors.slice(0, 3).map(({ emailId, message }) => `${emailId ?? 'run'}: ${message}`).join(' · ')}
           </div>
         )}
-        {busy && !run && <p className="mt-10 text-sm text-slate-500">Loading workspace…</p>}
+        {busy && !run && <p className="mt-10 text-sm text-blue-300/60">Loading workspace…</p>}
 
         {run && <div className="mt-8"><RunProgress run={run} onFilter={applySummaryFilter} onRetry={retryRun} retrying={retrying} onExport={exportSubmission} /></div>}
 
@@ -222,9 +225,9 @@ const LandingPage = () => {
         )}
 
         {!run && !busy && (
-          <section className="mt-8 rounded-2xl border border-dashed border-slate-300 bg-white p-10 text-center">
-            <h2 className="text-lg font-semibold text-slate-900">No processing run yet</h2>
-            <p className="mt-2 text-sm text-slate-500">Start a run to import and process the 520-email challenge bundle.</p>
+          <section className="mt-8 rounded-lg border border-dashed border-blue-800 bg-blue-950/30 p-10 text-center">
+            <h2 className="text-lg font-semibold text-white">No processing run yet</h2>
+            <p className="mt-2 text-sm text-blue-300/70">Start a run to import and process the 520-email challenge bundle.</p>
           </section>
         )}
 
@@ -246,18 +249,18 @@ const LandingPage = () => {
                 onPage={(nextPage) => applyFilters(appliedFilters, nextPage)}
               />
             </div>
-            <section className="min-w-0 rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+            <section className="min-w-0 rounded-lg border border-blue-900/60 bg-[#0a1526] p-5 shadow-sm">
               {selectedEmail ? (
                 <>
                   <div className="flex flex-wrap items-start justify-between gap-4">
                     <div>
-                      <p className="font-mono text-xs text-blue-600">{selectedEmail.emailId}</p>
-                      <h2 className="mt-1 text-xl font-semibold text-slate-950">{selectedEmail.source?.subject}</h2>
-                      <p className="mt-1 text-sm text-slate-500">From {selectedEmail.source?.from}</p>
+                      <p className="font-mono text-xs text-blue-500">{selectedEmail.emailId}</p>
+                      <h2 className="mt-1 text-xl font-semibold text-white">{selectedEmail.source?.subject}</h2>
+                      <p className="mt-1 text-sm text-blue-300/70">From {selectedEmail.source?.from}</p>
                     </div>
                     <StatusBadge value={selectedEmail.result?.status} />
                   </div>
-                  <div className="mt-5 rounded-xl bg-slate-50 p-4 text-sm text-slate-700">
+                  <div className="mt-5 rounded-md bg-blue-950/50 p-4 text-sm text-blue-200/80">
                     <span className="font-semibold">Classification:</span>{' '}
                     {selectedEmail.result?.category?.replaceAll('_', ' ')} via {selectedEmail.classification?.method}
                     {selectedEmail.result?.reviewReason && <span> · {selectedEmail.result.reviewReason.replaceAll('_', ' ')}</span>}
@@ -269,7 +272,7 @@ const LandingPage = () => {
                   )}
                   {selectedEmail.result?.category === 'BL_COMPARISON' && selectedEmail.documents?.si?.fields
                     ? <div className="mt-5"><FieldComparisonTable email={selectedEmail} /></div>
-                    : <p className="mt-6 text-sm text-slate-500">
+                    : <p className="mt-6 text-sm text-blue-300/60">
                         {selectedEmail.result?.category === 'BL_COMPARISON'
                           ? 'Field comparison stopped at the review reason shown above.'
                           : 'This category does not continue to document comparison.'}
@@ -289,7 +292,7 @@ const LandingPage = () => {
                     />
                   )}
                 </>
-              ) : <p className="text-sm text-slate-500">Select an email to inspect it.</p>}
+              ) : <p className="text-sm text-blue-300/60">Select an email to inspect it.</p>}
             </section>
           </div>
         )}

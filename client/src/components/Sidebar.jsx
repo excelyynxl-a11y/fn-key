@@ -1,28 +1,53 @@
+import { useState } from 'react'
+import { LayoutDashboard, PanelLeftClose, PanelLeftOpen } from 'lucide-react'
+
 const Sidebar = () => {
+  const [collapsed, setCollapsed] = useState(false)
+
   return (
-    <aside className="border-b border-slate-800 bg-slate-950 px-5 py-5 text-white lg:min-h-screen lg:w-72 lg:border-b-0 lg:border-r">
-      <div className="flex items-center gap-3">
-        <div className="grid size-10 place-items-center rounded-xl bg-blue-600 font-bold">S</div>
-        <div>
-          <p className="font-semibold">SDOC</p>
-          <p className="text-xs text-slate-400">Document verification</p>
+    <aside
+      className={`shrink-0 border-b border-blue-950 bg-[#030814] text-white transition-[width] duration-300 lg:min-h-screen lg:border-b-0 lg:border-r ${
+        collapsed ? 'lg:w-20' : 'lg:w-72'
+      }`}
+    >
+      <div className="flex items-center gap-3 px-4 py-5 lg:px-5">
+        <div className="grid size-10 shrink-0 place-items-center rounded-full bg-blue-600 font-bold">S</div>
+        {!collapsed && (
+          <div className="min-w-0">
+            <p className="font-semibold">SDOC</p>
+            <p className="text-xs text-blue-400/70">Document verification</p>
+          </div>
+        )}
+        <button
+          type="button"
+          onClick={() => setCollapsed((value) => !value)}
+          aria-label={collapsed ? 'Expand sidebar' : 'Collapse sidebar'}
+          aria-expanded={!collapsed}
+          title={collapsed ? 'Expand sidebar' : 'Collapse sidebar'}
+          className={`grid size-8 shrink-0 place-items-center rounded-full border border-blue-900 bg-blue-950 text-blue-300 transition hover:bg-blue-900 hover:text-white ${
+            collapsed ? 'mx-auto' : 'ml-auto'
+          }`}
+        >
+          {collapsed ? <PanelLeftOpen className="size-4" /> : <PanelLeftClose className="size-4" />}
+        </button>
+      </div>
+
+      {!collapsed && (
+        <div className="mx-4 rounded-lg border border-blue-900/60 bg-blue-950/50 p-4 lg:mx-5">
+          <p className="text-sm leading-6 text-blue-200/70"></p>
         </div>
-      </div>
-      <div className="mt-8 rounded-2xl border border-slate-800 bg-slate-900 p-4">
-        <p className="text-xs font-semibold uppercase tracking-[0.16em] text-blue-400">Stage 4</p>
-        <p className="mt-2 text-sm leading-6 text-slate-300">
-          Explainable operations, human review, reversible learning, and measurable value.
-        </p>
-      </div>
-      <ul className="mt-6 space-y-2 text-sm text-slate-300">
-        <li className="rounded-xl bg-slate-800 px-4 py-3 font-medium text-white">Run dashboard</li>
-        <li className="px-4 py-2">Deterministic-first scoring</li>
-        <li className="px-4 py-2">TXT · PDF · DOCX · XLSX</li>
-        <li className="px-4 py-2">Validated AI/vision fallback</li>
-        <li className="px-4 py-2">Human review queue</li>
-        <li className="px-4 py-2">Knowledge controls</li>
-        <li className="px-4 py-2">7 required fields</li>
-        <li className="px-4 py-2">Exact JSON export</li>
+      )}
+
+      <ul className="mt-6 space-y-2 px-3 text-sm text-blue-200/80 lg:px-4">
+        <li
+          title="Run dashboard"
+          className={`flex items-center rounded-md bg-blue-600/20 font-medium text-white ring-1 ring-blue-800 ${
+            collapsed ? 'justify-center px-0 py-3' : 'gap-2 px-4 py-3'
+          }`}
+        >
+          <LayoutDashboard className="size-4 shrink-0" />
+          {!collapsed && <span>Run dashboard</span>}
+        </li>
       </ul>
     </aside>
   )

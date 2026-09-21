@@ -1,3 +1,5 @@
+import { Brain, Sparkles } from 'lucide-react';
+
 const categories = ['BL_COMPARISON', 'SI_REQUEST', 'INVOICE_QUERY', 'GENERAL', 'SPAM'];
 
 function display(value) {
@@ -10,20 +12,20 @@ export default function ClassificationEvidence({ classification }) {
   const maximum = Math.max(1, ...Object.values(scores));
 
   return (
-    <section className="mt-5 rounded-xl border border-slate-200 p-4">
+    <section className="mt-5 rounded-md border border-blue-900/60 bg-[#0a1526] p-4">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
-          <p className="text-xs font-semibold uppercase tracking-[0.14em] text-slate-500">Classification evidence</p>
-          <p className="mt-1 text-sm text-slate-700">{classification.reason}</p>
+          <p className="flex items-center gap-1.5 text-xs font-semibold uppercase tracking-[0.14em] text-blue-300/60"><Brain className="size-3.5" /> Classification evidence</p>
+          <p className="mt-1 text-sm text-blue-200/80">{classification.reason}</p>
         </div>
         <div className="flex gap-2 text-xs">
-          <span className="rounded-full bg-blue-50 px-2.5 py-1 font-semibold text-blue-700">{classification.method}</span>
+          <span className="inline-flex items-center gap-1 rounded-md border border-blue-800 bg-blue-900/50 px-2.5 py-1 font-semibold text-blue-200"><Sparkles className="size-3" /> {classification.method}</span>
           {classification.confidence != null && (
-            <span className="rounded-full bg-slate-100 px-2.5 py-1 font-semibold text-slate-700">
+            <span className="rounded-md border border-blue-800 bg-blue-950/70 px-2.5 py-1 font-semibold text-blue-200">
               {Math.round(classification.confidence * 100)}% confidence
             </span>
           )}
-          {classification.cacheHit && <span className="rounded-full bg-violet-50 px-2.5 py-1 font-semibold text-violet-700">cache hit</span>}
+          {classification.cacheHit && <span className="rounded-md border border-violet-800 bg-violet-950/60 px-2.5 py-1 font-semibold text-violet-300">cache hit</span>}
         </div>
       </div>
 
@@ -31,13 +33,13 @@ export default function ClassificationEvidence({ classification }) {
         {categories.map((category) => {
           const score = scores[category] ?? 0;
           return (
-            <div key={category} className="rounded-lg bg-slate-50 p-2.5">
+            <div key={category} className="rounded-md bg-blue-950/50 p-2.5">
               <div className="flex items-center justify-between gap-2 text-[11px]">
-                <span className="truncate text-slate-500">{display(category)}</span>
-                <strong className="text-slate-800">{score}</strong>
+                <span className="truncate text-blue-300/60">{display(category)}</span>
+                <strong className="text-white">{score}</strong>
               </div>
-              <div className="mt-2 h-1.5 overflow-hidden rounded-full bg-slate-200">
-                <div className="h-full rounded-full bg-blue-500" style={{ width: `${(score / maximum) * 100}%` }} />
+              <div className="mt-2 h-1.5 overflow-hidden rounded-sm bg-blue-900/60">
+                <div className="h-full rounded-sm bg-blue-500" style={{ width: `${(score / maximum) * 100}%` }} />
               </div>
             </div>
           );
@@ -49,7 +51,7 @@ export default function ClassificationEvidence({ classification }) {
           const phrase = typeof evidence === 'string' ? evidence : evidence.phrase;
           const location = typeof evidence === 'string' ? null : evidence.location;
           return (
-            <span key={`${phrase}-${index}`} className="rounded-lg border border-blue-100 bg-blue-50 px-2.5 py-1.5 text-xs text-blue-800">
+            <span key={`${phrase}-${index}`} className="rounded-md border border-blue-800 bg-blue-950/60 px-2.5 py-1.5 text-xs text-blue-200">
               “{phrase}”{location ? ` · ${location}` : ''}
             </span>
           );

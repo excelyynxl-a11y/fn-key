@@ -1,25 +1,34 @@
+import { CircleAlert, CircleCheck, CircleX, Clock, LoaderCircle, TriangleAlert } from 'lucide-react';
+
 const styles = {
-  OK: 'bg-emerald-100 text-emerald-700',
-  MISMATCH: 'bg-rose-100 text-rose-700',
-  NEEDS_REVIEW: 'bg-amber-100 text-amber-800',
-  completed: 'bg-emerald-100 text-emerald-700',
-  completed_with_errors: 'bg-amber-100 text-amber-800',
-  running: 'bg-blue-100 text-blue-700',
-  queued: 'bg-slate-100 text-slate-700',
-  failed: 'bg-rose-100 text-rose-700'
+  OK: 'border-emerald-800 bg-emerald-500/10 text-emerald-300',
+  MISMATCH: 'border-rose-800 bg-rose-500/10 text-rose-300',
+  NEEDS_REVIEW: 'border-amber-800 bg-amber-500/10 text-amber-300',
+  completed: 'border-emerald-800 bg-emerald-500/10 text-emerald-300',
+  completed_with_errors: 'border-amber-800 bg-amber-500/10 text-amber-300',
+  running: 'border-blue-800 bg-blue-500/10 text-blue-300',
+  queued: 'border-blue-800 bg-blue-950/70 text-blue-300',
+  failed: 'border-rose-800 bg-rose-500/10 text-rose-300'
 };
 
-const symbols = {
-  OK: '✓', MISMATCH: '!', NEEDS_REVIEW: '?', completed: '✓', completed_with_errors: '!',
-  running: '↻', queued: '…', failed: '×'
+const icons = {
+  OK: CircleCheck,
+  MISMATCH: CircleX,
+  NEEDS_REVIEW: TriangleAlert,
+  completed: CircleCheck,
+  completed_with_errors: TriangleAlert,
+  running: LoaderCircle,
+  queued: Clock,
+  failed: CircleX
 };
 
 export default function StatusBadge({ value }) {
-  if (!value) return <span className="text-slate-400">Pending</span>;
+  if (!value) return <span className="text-blue-400/60">Pending</span>;
+  const Icon = icons[value] ?? CircleAlert;
   return (
-    <span className={`inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-xs font-semibold ${styles[value] ?? 'bg-slate-100 text-slate-700'}`}>
-      <span aria-hidden="true">{symbols[value] ?? '•'}</span>{value.replaceAll('_', ' ')}
+    <span className={`inline-flex items-center gap-1 rounded-md border px-2.5 py-1 text-xs font-semibold ${styles[value] ?? 'border-blue-800 bg-blue-950/70 text-blue-300'}`}>
+      <Icon className={`size-3.5 ${value === 'running' ? 'animate-spin' : ''}`} aria-hidden="true" />
+      {value.replaceAll('_', ' ')}
     </span>
   );
 }
-
