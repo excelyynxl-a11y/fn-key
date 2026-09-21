@@ -40,7 +40,9 @@ Host ports bind to loopback for local development. The backend uses `MONGO_URI` 
 3. The API classifies each message, parses supported attachment formats, resolves SI/BL roles, and extracts and normalizes the seven comparison fields.
 4. Select an inbox row to inspect classification evidence, parser outcomes, field values, page/sheet/cell/line evidence, extraction method, confidence, and final status.
 5. Download a completed run's exact submission object from `GET /api/runs/:runId/submission`.
-6. Resolve review cases with a required note, preview the deterministic outcome, and export the updated submission from the dashboard.
+6. Resolve review cases with a required note and preview the deterministic outcome before saving.
+7. Inspect the retained review history; retry one resolved email or reopen its case when new evidence arrives.
+8. Inspect persisted run metrics and export the updated submission from the dashboard.
 
 AI evidence must occur verbatim in the source text whenever embedded text is available. New classification phrases are rejected when they are generic, sensitive, shipment-specific, too long, or conflicting; accepted phrases begin in low-weight probation. Document AI requests contain only unresolved roles or fields, use strict schemas, and are cached by source hash, model, prompt, schema, and requested fields. Scanned evidence that cannot be verified locally remains `NEEDS_REVIEW`.
 
@@ -65,7 +67,8 @@ Implemented API paths:
 | `GET` | `/api/emails?runId=...` | List results for a run |
 | `GET` | `/api/emails/:emailId` | Inspect one complete result |
 | `POST` | `/api/emails/:emailId/retry` | Reprocess one email with saved review overrides |
-| `GET/PATCH` | `/api/reviews[/:reviewId]` | List, inspect, preview, and resolve review cases |
+| `GET/PATCH` | `/api/reviews[/:reviewId]` | List, inspect, preview, and resolve review cases with optimistic version checks |
+| `POST` | `/api/reviews/:reviewId/reopen` | Reopen a resolved review with a required reason and version check |
 | `GET/PATCH` | `/api/knowledge[/:id]` | Inspect and moderate adaptive knowledge |
 | `GET` | `/api/knowledge/audit` | Inspect immutable learning and moderation events |
 
@@ -131,7 +134,7 @@ If changing `PORT`, also update `VITE_API_URL`. If changing `CLIENT_PORT`, updat
 
 ## MongoDB and persistence
 
-Email records, processing runs, extracted fields, and comparison results are persisted through Mongoose. Dataset imports use `emailId` upserts, so rerunning the same source does not create duplicate email documents. MongoDB network access must allow the API host; if Atlas reports that no server can be reached, check its network access list and credentials.
+Email records, processing runs, extracted fields, comparison results, review history, and per-attempt operational metrics are persisted through Mongoose. Completed-run metric snapshots remain available after a later run claims the current email records. Dataset imports use `emailId` upserts, so rerunning the same source does not create duplicate email documents. MongoDB network access must allow the API host; if Atlas reports that no server can be reached, check its network access list and credentials.
 
 ## Structure
 
