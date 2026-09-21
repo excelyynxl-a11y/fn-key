@@ -63,6 +63,20 @@ test('upserts an open review case with an immutable processing attempt', async (
   assert.equal(call.options.upsert, true);
 });
 
+test('closes an open review automatically when reprocessing resolves it', async () => {
+  let call;
+  const reviewModel = {
+    async findOneAndUpdate(filter, update, options) { call = { filter, update, options }; return call; }
+  };
+  await syncReviewCase({
+    runId: 'run-1', emailId: 'email_001',
+    result: { status: 'OK', reviewReason: null, defectFields: [] }
+  }, reviewModel);
+  assert.deepEqual(call.filter, { runId: 'run-1', emailId: 'email_001', status: 'open' });
+  assert.equal(call.update.$set.status, 'resolved');
+  assert.equal(call.update.$set.resolution.action, 'reprocessed');
+});
+
 test('resolving a missing value reruns comparison without changing raw source', async () => {
   const source = (await repository.listEmails()).find(({ email_id: emailId }) => emailId === 'email_516');
   const inspected = await Promise.all(source.attachments.map((reference) => repository.inspectAttachment(reference)));

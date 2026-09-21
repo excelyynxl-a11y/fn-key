@@ -19,12 +19,24 @@ export function reviewStageForReason(reviewReason) {
 }
 
 export async function syncReviewCase({ runId, emailId, result }, reviewModel = ReviewCase) {
-  if (result.status !== 'NEEDS_REVIEW') return null;
   const attempt = {
     at: new Date(),
     status: result.status,
     reviewReason: result.reviewReason
   };
+  if (result.status !== 'NEEDS_REVIEW') {
+    return reviewModel.findOneAndUpdate(
+      { runId, emailId, status: 'open' },
+      {
+        $set: {
+          status: 'resolved', resolvedAt: new Date(),
+          resolution: { action: 'reprocessed', nextResult: result }
+        },
+        $push: { attempts: attempt }
+      },
+      { new: true }
+    );
+  }
   return reviewModel.findOneAndUpdate(
     { runId, emailId },
     {
@@ -182,17 +194,7 @@ export async function retryReviewedEmail(emailId, runId, options = {}) {
   });
   const delta = outcomeCounterDelta(email.result?.status, processed.result.status);
   if (Object.keys(delta).length > 0) await runModel.updateOne({ runId }, { $inc: delta });
-  if (processed.result.status === 'NEEDS_REVIEW') {
-    await syncReviewCase({ runId, emailId, result: processed.result }, reviewModel);
-  } else {
-    await reviewModel.updateOne({ runId, emailId, status: 'open' }, {
-      $set: {
-        status: 'resolved', resolvedAt: new Date(),
-        resolution: { action: 'retry', nextResult: processed.result }
-      },
-      $push: { attempts: { at: new Date(), status: processed.result.status, reviewReason: null } }
-    });
-  }
+  await syncReviewCase({ runId, emailId, result: processed.result }, reviewModel);
   await auditModel.create({
     eventType: 'email.retry.completed', entityType: 'email', entityId: emailId,
     runId, emailId, details: { status: processed.result.status, reviewReason: processed.result.reviewReason }

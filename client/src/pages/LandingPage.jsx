@@ -5,6 +5,7 @@ import ClassificationEvidence from '../components/ClassificationEvidence.jsx';
 import FieldComparisonTable from '../components/FieldComparisonTable.jsx';
 import InboxFilters, { emptyInboxFilters } from '../components/InboxFilters.jsx';
 import KnowledgePanel from '../components/KnowledgePanel.jsx';
+import MetricsPanel from '../components/MetricsPanel.jsx';
 import RunProgress from '../components/RunProgress.jsx';
 import Sidebar from '../components/Sidebar.jsx';
 import SourceEmailPanel from '../components/SourceEmailPanel.jsx';
@@ -159,6 +160,20 @@ const LandingPage = () => {
     }
   }
 
+  async function exportSubmission() {
+    try {
+      const submission = await request(`/api/runs/${run.runId}/submission`);
+      const url = URL.createObjectURL(new Blob([JSON.stringify(submission, null, 2)], { type: 'application/json' }));
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = `sdoc-submission-${run.runId}.json`;
+      link.click();
+      URL.revokeObjectURL(url);
+    } catch (exportError) {
+      setError(exportError.message);
+    }
+  }
+
   async function completeReview() {
     const emailId = selectedEmail.emailId;
     await Promise.all([loadReviews(run.runId), loadEmails(run.runId, appliedFilters, page)]);
@@ -195,12 +210,13 @@ const LandingPage = () => {
         )}
         {busy && !run && <p className="mt-10 text-sm text-slate-500">Loading workspace…</p>}
 
-        {run && <div className="mt-8"><RunProgress run={run} onFilter={applySummaryFilter} onRetry={retryRun} retrying={retrying} /></div>}
+        {run && <div className="mt-8"><RunProgress run={run} onFilter={applySummaryFilter} onRetry={retryRun} retrying={retrying} onExport={exportSubmission} /></div>}
 
         {run && ['completed', 'completed_with_errors'].includes(run.state) && (
           <div className="mt-4"><ReviewQueue reviews={reviews} grouped={reviewMeta.grouped} onSelect={selectEmail} selectedEmailId={selectedEmail?.emailId} /></div>
         )}
         {run && ['completed', 'completed_with_errors'].includes(run.state) && <KnowledgePanel />}
+        {run && ['completed', 'completed_with_errors'].includes(run.state) && <MetricsPanel runId={run.runId} />}
 
         {!run && !busy && (
           <section className="mt-8 rounded-2xl border border-dashed border-slate-300 bg-white p-10 text-center">

@@ -8,7 +8,7 @@ function elapsedLabel(startedAt, completedAt, now) {
   return `${Math.floor(seconds / 60)}m ${seconds % 60}s`;
 }
 
-export default function RunProgress({ run, onFilter, onRetry, retrying }) {
+export default function RunProgress({ run, onFilter, onRetry, retrying, onExport }) {
   const [now, setNow] = useState(Date.now());
   useEffect(() => {
     if (run.completedAt) return undefined;
@@ -30,6 +30,9 @@ export default function RunProgress({ run, onFilter, onRetry, retrying }) {
         <div className="flex items-center gap-3">
           <span className="text-xs text-slate-500">Elapsed {elapsedLabel(run.startedAt, run.completedAt, now)}</span>
           <StatusBadge value={run.state} />
+          {['completed', 'completed_with_errors'].includes(run.state) && (
+            <button type="button" onClick={onExport} className="rounded-lg bg-blue-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-blue-700">Export JSON</button>
+          )}
           {['completed', 'completed_with_errors', 'failed'].includes(run.state) && ((counts.review ?? 0) > 0 || (counts.failed ?? 0) > 0) && (
             <button type="button" disabled={retrying} onClick={onRetry} className="rounded-lg border border-blue-200 px-3 py-1.5 text-xs font-semibold text-blue-700 hover:bg-blue-50 disabled:opacity-50">
               {retrying ? 'Retrying…' : 'Retry review/failed'}

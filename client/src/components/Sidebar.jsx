@@ -9,9 +9,9 @@ const Sidebar = () => {
         </div>
       </div>
       <div className="mt-8 rounded-2xl border border-slate-800 bg-slate-900 p-4">
-        <p className="text-xs font-semibold uppercase tracking-[0.16em] text-blue-400">Stage 3</p>
+        <p className="text-xs font-semibold uppercase tracking-[0.16em] text-blue-400">Stage 4</p>
         <p className="mt-2 text-sm leading-6 text-slate-300">
-          Multi-format SI/BL parsing, traceable seven-field extraction, and deterministic comparison.
+          Explainable operations, human review, reversible learning, and measurable value.
         </p>
       </div>
       <ul className="mt-6 space-y-2 text-sm text-slate-300">
@@ -19,6 +19,8 @@ const Sidebar = () => {
         <li className="px-4 py-2">Deterministic-first scoring</li>
         <li className="px-4 py-2">TXT · PDF · DOCX · XLSX</li>
         <li className="px-4 py-2">Validated AI/vision fallback</li>
+        <li className="px-4 py-2">Human review queue</li>
+        <li className="px-4 py-2">Knowledge controls</li>
         <li className="px-4 py-2">7 required fields</li>
         <li className="px-4 py-2">Exact JSON export</li>
       </ul>

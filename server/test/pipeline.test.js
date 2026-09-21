@@ -129,4 +129,6 @@ test('uses field AI only for unresolved values and keeps the final comparison de
   }]);
   assert.equal(processed.documents.si.fields.shipper.method, 'alias_rule');
   assert.equal(processed.documents.si.fields.gross_weight_kg.method, 'ai');
+  assert.equal(processed.telemetry.aiFallbacks.documentFields, 1);
+  assert.equal(processed.telemetry.aiFallbacks.classification, 1);
 });

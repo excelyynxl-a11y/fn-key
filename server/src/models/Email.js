@@ -139,6 +139,25 @@ const emailSchema = new mongoose.Schema({
     message: { type: String, default: null },
     retryable: { type: Boolean, default: false }
   },
+  metrics: {
+    durationMs: { type: Number, min: 0, default: null },
+    aiFallbacks: {
+      classification: { type: Number, min: 0, default: 0 },
+      documentRole: { type: Number, min: 0, default: 0 },
+      documentFields: { type: Number, min: 0, default: 0 }
+    },
+    cacheHits: {
+      classification: { type: Number, min: 0, default: 0 },
+      documentRole: { type: Number, min: 0, default: 0 },
+      documentFields: { type: Number, min: 0, default: 0 }
+    },
+    usage: {
+      inputTokens: { type: Number, min: 0, default: 0 },
+      outputTokens: { type: Number, min: 0, default: 0 }
+    },
+    estimatedCostUsd: { type: Number, min: 0, default: 0 },
+    processingAttempts: { type: Number, min: 0, default: 0 }
+  },
   lastRunId: { type: String, default: null, index: true },
   pipelineVersion: { type: String, required: true }
 }, {

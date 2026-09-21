@@ -51,6 +51,39 @@ function parsedByReference(attachments, reference) {
   return attachments.find((attachment) => attachment.reference === reference);
 }
 
+function usageTotals(...usages) {
+  return usages.filter(Boolean).reduce((total, usage) => ({
+    inputTokens: total.inputTokens + Number(usage.input_tokens ?? usage.inputTokens ?? 0),
+    outputTokens: total.outputTokens + Number(usage.output_tokens ?? usage.outputTokens ?? 0)
+  }), { inputTokens: 0, outputTokens: 0 });
+}
+
+function telemetry(classification, {
+  roleResolution = null,
+  extractions = []
+} = {}) {
+  const fieldFallbacks = extractions.filter(({ attemptedAi }) => attemptedAi);
+  const roleFallback = Boolean(roleResolution?.attemptedAi);
+  const usage = usageTotals(
+    classification?.usage,
+    roleResolution?.roles?.aiMetadata?.usage,
+    ...fieldFallbacks.map(({ aiMetadata }) => aiMetadata?.usage)
+  );
+  return {
+    aiFallbacks: {
+      classification: classification?.method === 'ai' ? 1 : 0,
+      documentRole: roleFallback ? 1 : 0,
+      documentFields: fieldFallbacks.length
+    },
+    cacheHits: {
+      classification: classification?.cacheHit ? 1 : 0,
+      documentRole: roleResolution?.roles?.aiMetadata?.cacheHit ? 1 : 0,
+      documentFields: fieldFallbacks.filter(({ aiMetadata }) => aiMetadata?.cacheHit).length
+    },
+    usage
+  };
+}
+
 export function rolesFromHumanOverride(attachments, roleOverride, note = '') {
   const siReference = roleOverride?.siAttachmentReference;
   const blReference = roleOverride?.blAttachmentReference;
@@ -114,18 +147,20 @@ async function resolveDocumentRoles(attachments, options) {
     return {
       roles: ruleRoles,
       attachments: attachRoleEvidence(attachments, ruleRoles),
-      aiError: null
+      aiError: null,
+      attemptedAi: false
     };
   }
   const roleFallback = options.documentRoleAi ?? detectDocumentRolesWithAi;
   try {
     const roles = await roleFallback(attachments, options.documentAiOptions ?? {});
-    return { roles, attachments: roles.attachments, aiError: null };
+    return { roles, attachments: roles.attachments, aiError: null, attemptedAi: true };
   } catch (error) {
     return {
       roles: ruleRoles,
       attachments: attachRoleEvidence(attachments, ruleRoles),
-      aiError: { code: error?.code ?? 'AI_DOCUMENT_FAILED', message: error?.message ?? 'Role fallback failed' }
+      aiError: { code: error?.code ?? 'AI_DOCUMENT_FAILED', message: error?.message ?? 'Role fallback failed' },
+      attemptedAi: true
     };
   }
 }
@@ -135,7 +170,7 @@ async function resolveDocumentFields(attachment, options, documentType, override
     extractRequiredFields(attachment.parsedDocument), documentType, overrides, note
   );
   const requestedFields = missingRequiredFields(ruleFields);
-  if (requestedFields.length === 0) return { fields: ruleFields, usedAi: false, aiError: null };
+  if (requestedFields.length === 0) return { fields: ruleFields, usedAi: false, attemptedAi: false, aiError: null };
 
   const fieldFallback = options.documentFieldAi ?? extractDocumentFieldsWithAi;
   try {
@@ -143,6 +178,7 @@ async function resolveDocumentFields(attachment, options, documentType, override
     return {
       fields: mergeAiFields(ruleFields, fallback.fields ?? {}),
       usedAi: true,
+      attemptedAi: true,
       aiError: null,
       aiMetadata: {
         cacheHit: fallback.cacheHit ?? false,
@@ -155,6 +191,7 @@ async function resolveDocumentFields(attachment, options, documentType, override
     return {
       fields: ruleFields,
       usedAi: false,
+      attemptedAi: true,
       aiError: { code: error?.code ?? 'AI_DOCUMENT_FAILED', message: error?.message ?? 'Field fallback failed' }
     };
   }
@@ -190,6 +227,7 @@ export async function processEmail(email, repository, options = {}) {
   if (classification.category !== 'BL_COMPARISON') {
     return {
       classification,
+      telemetry: telemetry(classification),
       attachments: sourceAttachments,
       documents: {},
       result: {
@@ -206,6 +244,7 @@ export async function processEmail(email, repository, options = {}) {
   if (sourceAttachments.length < 2 || sourceAttachments.some((attachment) => attachment.exists === false)) {
     return {
       classification,
+      telemetry: telemetry(classification),
       attachments: sourceAttachments,
       documents: {},
       result: reviewResult(classification.category, 'missing_attachment')
@@ -219,6 +258,7 @@ export async function processEmail(email, repository, options = {}) {
   if (hardUnreadable.length > 0) {
     return {
       classification,
+      telemetry: telemetry(classification),
       attachments: parsedAttachments.map(attachmentForPersistence),
       documents: {},
       result: reviewResult(classification.category, 'unreadable')
@@ -235,6 +275,7 @@ export async function processEmail(email, repository, options = {}) {
   if (!roles.valid) {
     return {
       classification,
+      telemetry: telemetry(classification, { roleResolution }),
       attachments: parsedAttachments.map(attachmentForPersistence),
       documents: {},
       result: reviewResult(classification.category, hasScannedAttachment ? 'unreadable' : 'wrong_doc_type')
@@ -259,6 +300,7 @@ export async function processEmail(email, repository, options = {}) {
 
   return {
     classification,
+    telemetry: telemetry(classification, { roleResolution, extractions: [siExtraction, blExtraction] }),
     attachments: parsedAttachments.map(attachmentForPersistence),
     documents: {
       si: roleDocument(siAttachment, siFields),

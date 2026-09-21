@@ -25,19 +25,31 @@ export async function runWithConcurrency(items, concurrency, worker) {
 }
 
 export function counterIncrement(processed) {
+  const aiFallbacks = Object.values(processed.telemetry?.aiFallbacks ?? {}).reduce((sum, value) => sum + value, 0);
+  const cacheHits = Object.values(processed.telemetry?.cacheHits ?? {}).reduce((sum, value) => sum + value, 0);
   return {
     'counts.processing': -1,
     'counts.processed': 1,
     'counts.classified': 1,
     'counts.ruleClassified': processed.classification.method === 'rule' ? 1 : 0,
     'counts.aiClassified': processed.classification.method === 'ai' ? 1 : 0,
-    'counts.aiCacheHits': processed.classification.cacheHit ? 1 : 0,
-    'counts.aiFallbacks': processed.classification.method === 'ai' ? 1 : 0,
+    'counts.aiCacheHits': cacheHits,
+    'counts.aiFallbacks': aiFallbacks,
     'counts.compared': processed.result.category === 'BL_COMPARISON' ? 1 : 0,
     'counts.ok': processed.result.status === 'OK' ? 1 : 0,
     'counts.mismatched': processed.result.status === 'MISMATCH' ? 1 : 0,
     'counts.review': processed.result.status === 'NEEDS_REVIEW' ? 1 : 0
   };
+}
+
+export function estimatedAiCost(usage = {}, {
+  inputPerMillion = Number(process.env.OPENAI_INPUT_COST_PER_MILLION ?? 0),
+  outputPerMillion = Number(process.env.OPENAI_OUTPUT_COST_PER_MILLION ?? 0)
+} = {}) {
+  return Number((
+    Number(usage.inputTokens ?? 0) * inputPerMillion / 1_000_000
+    + Number(usage.outputTokens ?? 0) * outputPerMillion / 1_000_000
+  ).toFixed(8));
 }
 
 async function processOneEmail(email, repository, runId, classificationOptions, { retry = false } = {}) {
@@ -51,6 +63,7 @@ async function processOneEmail(email, repository, runId, classificationOptions, 
   );
 
   try {
+    const processingStartedAt = Date.now();
     await AuditEvent.create({
       eventType: retry ? 'email.retry.started' : 'email.processing.started',
       entityType: 'email',
@@ -60,6 +73,8 @@ async function processOneEmail(email, repository, runId, classificationOptions, 
       details: { retry }
     });
     const processed = await processEmail(email, repository, classificationOptions);
+    const durationMs = Date.now() - processingStartedAt;
+    const estimatedCostUsd = estimatedAiCost(processed.telemetry?.usage);
     await recordKnowledgeUsage(processed.classification.matchedEvidence);
     await syncReviewCase({ runId, emailId: email.emailId, result: processed.result });
     await AuditEvent.create({
@@ -88,10 +103,16 @@ async function processOneEmail(email, repository, runId, classificationOptions, 
         classification: processed.classification,
         documents: processed.documents,
         result: processed.result,
+        'metrics.durationMs': durationMs,
+        'metrics.aiFallbacks': processed.telemetry?.aiFallbacks ?? {},
+        'metrics.cacheHits': processed.telemetry?.cacheHits ?? {},
+        'metrics.usage': processed.telemetry?.usage ?? {},
+        'metrics.estimatedCostUsd': estimatedCostUsd,
         failure: { code: null, message: null, retryable: false },
         lastRunId: runId,
         pipelineVersion: PIPELINE_VERSION
-      }
+      },
+      $inc: { 'metrics.processingAttempts': 1 }
     });
     await ProcessingRun.updateOne(
       { runId },

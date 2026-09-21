@@ -1,6 +1,6 @@
 # FN Key - MERN development environment
 
-SDOC is an adaptive shipping-document verification application built on React, Express, and MongoDB. Stage 3 imports the 520-email challenge bundle, classifies messages, parses TXT/PDF/DOCX/XLSX attachments, identifies one shipping instruction and one bill of lading, extracts seven traceable fields, and makes the final comparison in deterministic code. Structured AI or vision is used only for unresolved classifications, document roles, or fields; validated results are cached and never directly choose the final status.
+SDOC is an adaptive shipping-document verification application built on React, Express, and MongoDB. Stage 4 imports and processes the 520-email challenge bundle, explains every classification and document decision, queues unresolved cases for human correction, exposes reversible knowledge controls, and reports operational coverage, latency, cache, cost, and review metrics. Structured AI or vision is used only for unresolved classifications, document roles, or fields; validated results are cached and never directly choose the final status.
 
 ## Stack and prerequisites
 
@@ -33,13 +33,14 @@ OPENAI_MODEL=gpt-5.5
 
 Host ports bind to loopback for local development. The backend uses `MONGO_URI` to connect to MongoDB Atlas or another reachable MongoDB deployment. Browser JavaScript uses the host API URL, because the browser cannot resolve Compose service names. The challenge bundle is mounted read-only at `/data/sdoc` inside the API container.
 
-## Stage 3 workflow
+## Stage 4 workflow
 
 1. Open http://localhost:5173.
 2. Select **Start new run**.
 3. The API classifies each message, parses supported attachment formats, resolves SI/BL roles, and extracts and normalizes the seven comparison fields.
 4. Select an inbox row to inspect classification evidence, parser outcomes, field values, page/sheet/cell/line evidence, extraction method, confidence, and final status.
 5. Download a completed run's exact submission object from `GET /api/runs/:runId/submission`.
+6. Resolve review cases with a required note, preview the deterministic outcome, and export the updated submission from the dashboard.
 
 AI evidence must occur verbatim in the source text whenever embedded text is available. New classification phrases are rejected when they are generic, sensitive, shipment-specific, too long, or conflicting; accepted phrases begin in low-weight probation. Document AI requests contain only unresolved roles or fields, use strict schemas, and are cached by source hash, model, prompt, schema, and requested fields. Scanned evidence that cannot be verified locally remains `NEEDS_REVIEW`.
 
@@ -60,8 +61,13 @@ Implemented API paths:
 | `GET` | `/api/runs/:runId` | Poll run progress |
 | `POST` | `/api/runs/:runId/retry` | Retry failed and review items |
 | `GET` | `/api/runs/:runId/submission` | Validate and export submission JSON |
+| `GET` | `/api/runs/:runId/metrics` | Return coverage, AI, cache, latency, cost, and review metrics |
 | `GET` | `/api/emails?runId=...` | List results for a run |
 | `GET` | `/api/emails/:emailId` | Inspect one complete result |
+| `POST` | `/api/emails/:emailId/retry` | Reprocess one email with saved review overrides |
+| `GET/PATCH` | `/api/reviews[/:reviewId]` | List, inspect, preview, and resolve review cases |
+| `GET/PATCH` | `/api/knowledge[/:id]` | Inspect and moderate adaptive knowledge |
+| `GET` | `/api/knowledge/audit` | Inspect immutable learning and moderation events |
 
 ## Daily commands
 
@@ -114,6 +120,8 @@ Compose reads a root `.env` and explicitly passes configuration to containers. K
 | `OPENAI_MODEL` | `gpt-5.5` | Configurable Responses API model |
 | `OPENAI_MAX_ATTEMPTS` | `3` | Maximum structured-AI attempts for transient failures |
 | `OPENAI_TIMEOUT_MS` | `20000` | Timeout per AI attempt in milliseconds |
+| `OPENAI_INPUT_COST_PER_MILLION` | `0` | Optional input-token price used for estimated cost |
+| `OPENAI_OUTPUT_COST_PER_MILLION` | `0` | Optional output-token price used for estimated cost |
 | `CLASSIFICATION_MIN_SCORE` | `4` | Minimum deterministic winning score |
 | `CLASSIFICATION_MIN_MARGIN` | `1.5` | Minimum lead over the second category |
 | `PROCESSING_CONCURRENCY` | `4` | Maximum emails processed concurrently |
@@ -131,7 +139,7 @@ Email records, processing runs, extracted fields, and comparison results are per
 client/
   src/
     components/          # Run progress, inbox, status and comparison UI
-    pages/               # Stage 3 dashboard
+    pages/               # Stage 4 operations and review dashboard
     services/api.js      # Shared fetch helper
     App.jsx
     main.jsx
