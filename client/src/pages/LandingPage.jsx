@@ -209,7 +209,7 @@ const LandingPage = () => {
           <div>
             <p className="text-xs font-bold uppercase tracking-[0.2em] text-blue-600">{activeView === 'dashboard' ? 'Operations workspace' : 'Adaptive intelligence'}</p>
             <h1 className="mt-2 text-3xl font-bold tracking-tight text-slate-950 sm:text-4xl">{activeView === 'dashboard' ? 'Review with confidence' : 'Adaptive knowledge base'}</h1>
-            <p className="mt-3 max-w-2xl text-base text-slate-500">{activeView === 'dashboard' ? 'Process shipping documents, investigate exceptions, and keep every decision explainable.' : 'Review, promote, block, and audit the knowledge used by deterministic classification.'}</p>
+            <p className="mt-3 max-w-2xl text-base text-slate-500">{activeView === 'dashboard' ? 'Process shipping documents, investigate exceptions, and keep every decision explainable.' : 'Review and manage the knowledge used by deterministic classification.'}</p>
           </div>
           {activeView === 'dashboard' && <button
             type="button"
@@ -251,7 +251,7 @@ const LandingPage = () => {
         )}
 
         {run && terminalRunStates.includes(run.state) && (
-          <div className="mt-10 grid gap-8 xl:grid-cols-[minmax(390px,0.85fr)_minmax(0,1.55fr)]">
+          <div className="mt-10 grid gap-8 xl:grid-cols-[minmax(0,1.35fr)_minmax(0,0.85fr)]">
             <div className="space-y-5">
               <InboxFilters
                 value={filterDraft}

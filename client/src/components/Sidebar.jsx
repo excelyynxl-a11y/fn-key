@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { BookOpen, LayoutDashboard, PanelLeftClose, PanelLeftOpen, ShieldCheck } from 'lucide-react'
+import { BookOpen, LayoutDashboard, PanelLeftClose, PanelLeftOpen } from 'lucide-react'
 
 const storageKey = 'sdoc.sidebar.collapsed'
 
@@ -17,11 +17,11 @@ const Sidebar = ({ activeView, onNavigate }) => {
     window.localStorage.setItem(storageKey, String(collapsed))
   }, [collapsed])
 
-  return (
+  const desktopWidth = collapsed ? 'lg:w-24' : 'lg:w-72'
+
+  return <>
     <aside
-      className={`shrink-0 border-b border-sky-100 bg-white text-slate-900 shadow-sm transition-[width] duration-300 lg:sticky lg:top-0 lg:min-h-screen lg:border-b-0 lg:border-r ${
-        collapsed ? 'lg:w-24' : 'lg:w-72'
-      }`}
+      className={`shrink-0 border-b border-sky-100 bg-white text-slate-900 shadow-sm transition-[width] duration-300 lg:fixed lg:inset-y-0 lg:left-0 lg:z-30 lg:h-screen lg:overflow-y-auto lg:border-b-0 lg:border-r ${desktopWidth}`}
     >
       <div className="flex items-center gap-3 border-b border-sky-100 px-4 py-5 lg:px-5">
         <div className="grid size-11 shrink-0 place-items-center rounded-2xl bg-gradient-to-br from-blue-500 to-sky-400 font-bold text-white shadow-md shadow-blue-200">S</div>
@@ -53,13 +53,7 @@ const Sidebar = ({ activeView, onNavigate }) => {
           ))}
         </ul>
 
-        <div className="mt-auto space-y-3 pt-8">
-          {!collapsed && (
-            <div className="rounded-2xl bg-sky-50 p-4 text-xs leading-5 text-slate-600 ring-1 ring-sky-100">
-              <p className="flex items-center gap-2 font-semibold text-slate-800"><ShieldCheck className="size-4 text-blue-600" /> Evidence-first</p>
-              <p className="mt-1">Uncertain decisions stay visible and reviewable.</p>
-            </div>
-          )}
+        <div className="mt-auto pt-8">
           <button
             type="button"
             onClick={() => setCollapsed((value) => !value)}
@@ -74,7 +68,8 @@ const Sidebar = ({ activeView, onNavigate }) => {
         </div>
       </nav>
     </aside>
-  )
+    <div aria-hidden="true" className={`hidden shrink-0 transition-[width] duration-300 lg:block ${desktopWidth}`} />
+  </>
 }
 
 export default Sidebar
