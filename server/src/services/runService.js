@@ -7,6 +7,7 @@ import { createDatasetRepository } from '../repositories/datasetRepository.js';
 import { defaultDatasetPath, importDataset } from './inboxService.js';
 import { loadActiveEmailPhrases, recordKnowledgeUsage, seedEmailCategoryPhrases } from './phraseKnowledgeService.js';
 import { seedDocumentKnowledge } from './knowledgeService.js';
+import { estimatedAiCost, refreshRunMetrics } from './metricsService.js';
 import { processEmail } from './pipelineService.js';
 import { syncReviewCase } from './reviewService.js';
 
@@ -42,16 +43,6 @@ export function counterIncrement(processed) {
   };
 }
 
-export function estimatedAiCost(usage = {}, {
-  inputPerMillion = Number(process.env.OPENAI_INPUT_COST_PER_MILLION ?? 0),
-  outputPerMillion = Number(process.env.OPENAI_OUTPUT_COST_PER_MILLION ?? 0)
-} = {}) {
-  return Number((
-    Number(usage.inputTokens ?? 0) * inputPerMillion / 1_000_000
-    + Number(usage.outputTokens ?? 0) * outputPerMillion / 1_000_000
-  ).toFixed(8));
-}
-
 async function processOneEmail(email, repository, runId, classificationOptions, { retry = false } = {}) {
   await Email.updateOne(
     { emailId: email.emailId },
@@ -75,6 +66,15 @@ async function processOneEmail(email, repository, runId, classificationOptions, 
     const processed = await processEmail(email, repository, classificationOptions);
     const durationMs = Date.now() - processingStartedAt;
     const estimatedCostUsd = estimatedAiCost(processed.telemetry?.usage);
+    const metricsAttempt = {
+      trigger: retry ? 'retry' : 'run',
+      at: new Date(),
+      durationMs,
+      aiFallbacks: processed.telemetry?.aiFallbacks ?? {},
+      cacheHits: processed.telemetry?.cacheHits ?? {},
+      usage: processed.telemetry?.usage ?? {},
+      estimatedCostUsd
+    };
     await recordKnowledgeUsage(processed.classification.matchedEvidence);
     await syncReviewCase({ runId, emailId: email.emailId, result: processed.result });
     await AuditEvent.create({
@@ -112,7 +112,8 @@ async function processOneEmail(email, repository, runId, classificationOptions, 
         lastRunId: runId,
         pipelineVersion: PIPELINE_VERSION
       },
-      $inc: { 'metrics.processingAttempts': 1 }
+      $inc: { 'metrics.processingAttempts': 1 },
+      $push: { 'metrics.attempts': metricsAttempt }
     });
     await ProcessingRun.updateOne(
       { runId },
@@ -208,6 +209,7 @@ export async function executeRun(runId, { retryOnly = false } = {}) {
         completedAt: new Date()
       }
     });
+    await refreshRunMetrics(runId);
   } catch (error) {
     await ProcessingRun.updateOne({ runId }, {
       $set: { state: 'failed', completedAt: new Date() },

@@ -216,7 +216,9 @@ const LandingPage = () => {
           <div className="mt-4"><ReviewQueue reviews={reviews} grouped={reviewMeta.grouped} onSelect={selectEmail} selectedEmailId={selectedEmail?.emailId} /></div>
         )}
         {run && ['completed', 'completed_with_errors'].includes(run.state) && <KnowledgePanel />}
-        {run && ['completed', 'completed_with_errors'].includes(run.state) && <MetricsPanel runId={run.runId} />}
+        {run && ['completed', 'completed_with_errors'].includes(run.state) && (
+          <MetricsPanel runId={run.runId} refreshKey={run.updatedAt ?? run.completedAt} />
+        )}
 
         {!run && !busy && (
           <section className="mt-8 rounded-2xl border border-dashed border-slate-300 bg-white p-10 text-center">

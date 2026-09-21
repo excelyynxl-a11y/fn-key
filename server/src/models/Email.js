@@ -156,7 +156,8 @@ const emailSchema = new mongoose.Schema({
       outputTokens: { type: Number, min: 0, default: 0 }
     },
     estimatedCostUsd: { type: Number, min: 0, default: 0 },
-    processingAttempts: { type: Number, min: 0, default: 0 }
+    processingAttempts: { type: Number, min: 0, default: 0 },
+    attempts: { type: [mongoose.Schema.Types.Mixed], default: [] }
   },
   lastRunId: { type: String, default: null, index: true },
   pipelineVersion: { type: String, required: true }

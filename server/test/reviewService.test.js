@@ -128,6 +128,7 @@ test('resolving a missing value reruns comparison without changing raw source', 
     emailModel,
     runModel: { async updateOne() {} },
     auditModel: { async create() {} },
+    metricsRefresher: async () => {},
     repository,
     phraseEntries: []
   });
@@ -163,7 +164,8 @@ test('reopens a resolved review with an audited optimistic update', async () => 
         return query({ ...review, status: 'open', resolvedAt: null, __v: 5 });
       }
     },
-    auditModel: { async create(event) { events.push(event); } }
+    auditModel: { async create(event) { events.push(event); } },
+    metricsRefresher: async () => {}
   });
   assert.equal(reopened.status, 'open');
   assert.deepEqual(updateCall.filter, { reviewId: 'review-1', __v: 4, status: 'resolved' });

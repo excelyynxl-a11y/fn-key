@@ -29,6 +29,7 @@ const processingRunSchema = new mongoose.Schema({
   pipelineVersion: { type: String, required: true },
   emailIds: { type: [String], default: [] },
   counts: { type: countSchema, default: () => ({}) },
+  metrics: { type: mongoose.Schema.Types.Mixed, default: null },
   startedAt: { type: Date, default: null },
   completedAt: { type: Date, default: null },
   runErrors: [{

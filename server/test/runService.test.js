@@ -1,6 +1,7 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import { counterIncrement, estimatedAiCost, runWithConcurrency } from '../src/services/runService.js';
+import { estimatedAiCost } from '../src/services/metricsService.js';
+import { counterIncrement, runWithConcurrency } from '../src/services/runService.js';
 
 test('processes every item without exceeding the concurrency limit', async () => {
   let active = 0;

@@ -7,6 +7,7 @@ import { createDatasetRepository } from '../repositories/datasetRepository.js';
 import { defaultDatasetPath } from './inboxService.js';
 import { loadActiveEmailPhrases } from './phraseKnowledgeService.js';
 import { learnClassificationPhrases } from './learningService.js';
+import { estimatedAiCost, refreshRunMetrics } from './metricsService.js';
 import { processEmail } from './pipelineService.js';
 
 export function reviewStageForReason(reviewReason) {
@@ -112,7 +113,8 @@ export async function resolveReview(reviewId, input, {
   runModel = ProcessingRun,
   auditModel = AuditEvent,
   repository = createDatasetRepository(defaultDatasetPath()),
-  phraseEntries
+  phraseEntries,
+  metricsRefresher = refreshRunMetrics
 } = {}) {
   const review = await reviewModel.findOne({ reviewId }).lean();
   if (!review) return null;
@@ -139,13 +141,27 @@ export async function resolveReview(reviewId, input, {
         runId: review.runId, emailId: review.emailId,
         details: { note: input.note, reviewer: input.reviewer, result: email.result }
       });
+      await metricsRefresher(review.runId);
     }
     return { review, preview: email.result, processed: null };
   }
 
+  const processingStartedAt = Date.now();
   const corrections = { ...input.corrections, note: input.note, reviewer: input.reviewer };
   const processed = await previewReviewCorrection(review, email, corrections, { repository, phraseEntries });
   if (input.preview) return { review, preview: processed.result, processed };
+
+  const durationMs = Date.now() - processingStartedAt;
+  const estimatedCostUsd = estimatedAiCost(processed.telemetry?.usage);
+  const metricsAttempt = {
+    trigger: 'review_correction',
+    at: new Date(),
+    durationMs,
+    aiFallbacks: processed.telemetry?.aiFallbacks ?? {},
+    cacheHits: processed.telemetry?.cacheHits ?? {},
+    usage: processed.telemetry?.usage ?? {},
+    estimatedCostUsd
+  };
 
   const reviewOverrides = mergeCorrections(email.reviewOverrides, input.corrections, input.note, input.reviewer);
   const remainsOpen = processed.result.status === 'NEEDS_REVIEW';
@@ -183,8 +199,15 @@ export async function resolveReview(reviewId, input, {
       classification: processed.classification,
       documents: processed.documents,
       result: processed.result,
-      processingState: 'completed'
-    }
+      processingState: 'completed',
+      'metrics.durationMs': durationMs,
+      'metrics.aiFallbacks': metricsAttempt.aiFallbacks,
+      'metrics.cacheHits': metricsAttempt.cacheHits,
+      'metrics.usage': metricsAttempt.usage,
+      'metrics.estimatedCostUsd': estimatedCostUsd
+    },
+    $inc: { 'metrics.processingAttempts': 1 },
+    $push: { 'metrics.attempts': metricsAttempt }
   });
   const delta = outcomeCounterDelta(email.result?.status, processed.result.status);
   if (Object.keys(delta).length > 0) await runModel.updateOne({ runId: review.runId }, { $inc: delta });
@@ -201,12 +224,14 @@ export async function resolveReview(reviewId, input, {
       previousResult: email.result, nextResult: processed.result
     }
   });
+  await metricsRefresher(review.runId);
   return { review, preview: processed.result, processed };
 }
 
 export async function reopenReview(reviewId, input, {
   reviewModel = ReviewCase,
-  auditModel = AuditEvent
+  auditModel = AuditEvent,
+  metricsRefresher = refreshRunMetrics
 } = {}) {
   const review = await reviewModel.findOne({ reviewId }).lean();
   if (!review) return null;
@@ -226,6 +251,7 @@ export async function reopenReview(reviewId, input, {
     runId: review.runId, emailId: review.emailId,
     details: { reason: input.reason, reviewer: input.reviewer, previousResolution: review.resolution }
   });
+  await metricsRefresher(review.runId);
   return reopened;
 }
 
@@ -234,17 +260,37 @@ export async function retryReviewedEmail(emailId, runId, options = {}) {
   const reviewModel = options.reviewModel ?? ReviewCase;
   const auditModel = options.auditModel ?? AuditEvent;
   const runModel = options.runModel ?? ProcessingRun;
+  const metricsRefresher = options.metricsRefresher ?? refreshRunMetrics;
   const email = await emailModel.findOne({ emailId, lastRunId: runId }).lean({ flattenMaps: true });
   if (!email) return null;
+  const processingStartedAt = Date.now();
   const processed = await previewReviewCorrection(null, email, {}, options);
+  const durationMs = Date.now() - processingStartedAt;
+  const estimatedCostUsd = estimatedAiCost(processed.telemetry?.usage);
+  const metricsAttempt = {
+    trigger: 'manual_retry',
+    at: new Date(),
+    durationMs,
+    aiFallbacks: processed.telemetry?.aiFallbacks ?? {},
+    cacheHits: processed.telemetry?.cacheHits ?? {},
+    usage: processed.telemetry?.usage ?? {},
+    estimatedCostUsd
+  };
   await emailModel.updateOne({ emailId, lastRunId: runId }, {
     $set: {
       'source.attachments': processed.attachments,
       classification: processed.classification,
       documents: processed.documents,
       result: processed.result,
-      processingState: 'completed'
-    }
+      processingState: 'completed',
+      'metrics.durationMs': durationMs,
+      'metrics.aiFallbacks': metricsAttempt.aiFallbacks,
+      'metrics.cacheHits': metricsAttempt.cacheHits,
+      'metrics.usage': metricsAttempt.usage,
+      'metrics.estimatedCostUsd': estimatedCostUsd
+    },
+    $inc: { 'metrics.processingAttempts': 1 },
+    $push: { 'metrics.attempts': metricsAttempt }
   });
   const delta = outcomeCounterDelta(email.result?.status, processed.result.status);
   if (Object.keys(delta).length > 0) await runModel.updateOne({ runId }, { $inc: delta });
@@ -253,5 +299,6 @@ export async function retryReviewedEmail(emailId, runId, options = {}) {
     eventType: 'email.retry.completed', entityType: 'email', entityId: emailId,
     runId, emailId, details: { status: processed.result.status, reviewReason: processed.result.reviewReason }
   });
+  await metricsRefresher(runId);
   return processed;
 }

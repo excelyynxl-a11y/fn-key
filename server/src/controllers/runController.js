@@ -1,9 +1,8 @@
 import { z } from 'zod';
 import Email from '../models/Email.js';
 import ProcessingRun from '../models/ProcessingRun.js';
-import ReviewCase from '../models/ReviewCase.js';
 import { buildSubmission } from '../services/submissionService.js';
-import { calculateRunMetrics } from '../services/metricsService.js';
+import { metricsForRun } from '../services/metricsService.js';
 import { retryRun, startRun } from '../services/runService.js';
 
 const startRunSchema = z.object({
@@ -70,17 +69,6 @@ export async function exportSubmissionController(req, res) {
 export async function getRunMetricsController(req, res) {
   const run = await ProcessingRun.findOne({ runId: req.params.runId }).lean();
   if (!run) return res.status(404).json({ data: null, error: { code: 'RUN_NOT_FOUND', message: 'Run not found', retryable: false }, meta: {} });
-  const [emails, reviews, previousRun] = await Promise.all([
-    Email.find({ lastRunId: run.runId }).select('processingState metrics').lean(),
-    ReviewCase.find({ runId: run.runId }).select('status').lean(),
-    ProcessingRun.findOne({
-      runId: { $ne: run.runId },
-      createdAt: { $lt: run.createdAt },
-      state: { $in: ['completed', 'completed_with_errors'] }
-    }).sort({ createdAt: -1 }).lean()
-  ]);
-  const metrics = calculateRunMetrics(emails, reviews, {
-    previousAiFallbacks: previousRun?.counts?.aiFallbacks ?? null
-  });
+  const metrics = await metricsForRun(run);
   return res.json({ data: metrics, error: null, meta: { runId: run.runId } });
 }

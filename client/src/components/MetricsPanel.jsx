@@ -3,12 +3,18 @@ import { request } from '../services/api.js';
 
 function percentage(value) { return `${Math.round((value ?? 0) * 100)}%`; }
 
-export default function MetricsPanel({ runId }) {
+export default function MetricsPanel({ runId, refreshKey }) {
   const [metrics, setMetrics] = useState(null);
   const [error, setError] = useState('');
   useEffect(() => {
-    request(`/api/runs/${runId}/metrics`).then((response) => setMetrics(response.data)).catch((loadError) => setError(loadError.message));
-  }, [runId]);
+    let cancelled = false;
+    setMetrics(null);
+    setError('');
+    request(`/api/runs/${runId}/metrics`)
+      .then((response) => !cancelled && setMetrics(response.data))
+      .catch((loadError) => !cancelled && setError(loadError.message));
+    return () => { cancelled = true; };
+  }, [refreshKey, runId]);
   if (error) return <p className="mt-4 text-xs text-rose-700">Metrics unavailable: {error}</p>;
   if (!metrics) return <p className="mt-4 text-xs text-slate-500">Calculating run metrics…</p>;
   const cards = [
@@ -29,6 +35,7 @@ export default function MetricsPanel({ runId }) {
       <div className="mt-3 grid grid-cols-2 gap-2 sm:grid-cols-4 xl:grid-cols-7">
         {cards.map(([label, value]) => <div key={label} className="rounded-lg bg-white p-3"><p className="text-[11px] text-slate-500">{label}</p><p className="mt-1 font-semibold text-slate-900">{value}</p></div>)}
       </div>
+      <p className="mt-3 text-xs text-cyan-900">{metrics.processingAttempts} processing attempt{metrics.processingAttempts === 1 ? '' : 's'} across {metrics.processed} completed emails.</p>
       {metrics.learningImpact.previousAiFallbacks !== null && <p className="mt-3 text-xs text-cyan-900">Repeated-run learning impact: {metrics.learningImpact.previousAiFallbacks} → {metrics.learningImpact.currentAiFallbacks} AI calls ({percentage(metrics.learningImpact.reductionRate)} reduction).</p>}
     </section>
   );
