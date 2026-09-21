@@ -19,7 +19,10 @@ export function createSubmissionRow(result) {
   const fieldDetails = readValue(result, 'fieldDetails', 'field_details');
   if (row.status === 'MISMATCH' && fieldDetails) {
     row.field_details = Object.fromEntries(
-      orderedDefectFields.map((field) => [field, fieldDetails[field]])
+      orderedDefectFields.map((field) => [
+        field,
+        fieldDetails instanceof Map ? fieldDetails.get(field) : fieldDetails[field]
+      ])
     );
   }
 
@@ -52,4 +55,3 @@ export function buildSubmission(records, expectedEmailIds) {
   );
   return submissionSchema.parse(submission);
 }
-

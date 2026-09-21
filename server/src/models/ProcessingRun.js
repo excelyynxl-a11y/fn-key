@@ -21,10 +21,11 @@ const processingRunSchema = new mongoose.Schema({
     index: true
   },
   pipelineVersion: { type: String, required: true },
+  emailIds: { type: [String], default: [] },
   counts: { type: countSchema, default: () => ({}) },
   startedAt: { type: Date, default: null },
   completedAt: { type: Date, default: null },
-  errors: [{
+  runErrors: [{
     emailId: { type: String, default: null },
     code: { type: String, required: true },
     message: { type: String, required: true }
@@ -36,4 +37,3 @@ processingRunSchema.index({ createdAt: -1 });
 export const ProcessingRun = mongoose.models.ProcessingRun
   ?? mongoose.model('ProcessingRun', processingRunSchema);
 export default ProcessingRun;
-

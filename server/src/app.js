@@ -2,6 +2,8 @@ import express from 'express';
 import cors from 'cors';
 import mongoose from 'mongoose';
 import emailRoutes from './routes/emailRoutes.js';
+import runRoutes from './routes/runRoutes.js';
+import { errorHandler, notFoundHandler } from './middleware/errorMiddleware.js';
 
 export function createApp() {
   const app = express();
@@ -15,9 +17,11 @@ export function createApp() {
 
   app.use(express.json());
 
-  app.get('/', (_req, res) => 
-    res.json({ message: 'API is running' })
-  );
+  app.get('/', (_req, res) => res.json({
+    data: { service: 'sdoc-api', message: 'API is running' },
+    error: null,
+    meta: {}
+  }));
 
   app.get('/health', (_req, res) => {
     const connected = mongoose.connection.readyState === 1;
@@ -27,8 +31,11 @@ export function createApp() {
     });
   });
 
-  // define routes
-  app.use('/api/email', emailRoutes);
+  app.use('/api/runs', runRoutes);
+  app.use('/api/emails', emailRoutes);
+
+  app.use(notFoundHandler);
+  app.use(errorHandler);
 
   return app;
 }
