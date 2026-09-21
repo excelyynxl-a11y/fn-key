@@ -9,7 +9,8 @@ export function normalizePhrase(value) {
     .replace(/[\u2018\u2019]/g, "'")
     .replace(/[\u2013\u2014]/g, '-')
     .replace(/[_/\\|]+/g, ' ')
-    .replace(/[^\p{L}\p{N}'&%+.-]+/gu, ' ')
+    .replace(/[.\-]+/g, ' ')
+    .replace(/[^\p{L}\p{N}'&%+]+/gu, ' ')
     .replace(/\s+/g, ' ')
     .trim();
 }

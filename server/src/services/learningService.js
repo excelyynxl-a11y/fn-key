@@ -11,7 +11,23 @@ const FORBIDDEN_PATTERNS = [
   /https?:\/\//i
 ];
 
-export function validateLearnedPhrase(phrase, email) {
+const CATEGORY_RELEVANCE_PATTERNS = Object.freeze({
+  BL_COMPARISON: [
+    /\b(?:si|shipping instruction).{0,40}\b(?:bl|bill of lading)\b/i,
+    /\b(?:bl|bill of lading).{0,40}\b(?:si|shipping instruction)\b/i,
+    /\b(?:check|confirm|compare|verify|amend|review|send).{0,24}\b(?:draft )?(?:bl|bill of lading)\b/i,
+    /\b(?:draft )?(?:bl|bill of lading).{0,24}\b(?:check|confirm|compare|verify|amend|review)\b/i
+  ],
+  SI_REQUEST: [
+    /\b(?:prepare|create|submit|send|provide|request|need(?:ed)?).{0,24}\b(?:si|shipping instruction)\b/i,
+    /\b(?:si|shipping instruction).{0,24}\b(?:prepare|create|submit|send|provide|request|need(?:ed)?)\b/i
+  ],
+  INVOICE_QUERY: [/\b(?:invoice|billing|billed|charges?|freight|payment|credit note)\b/i],
+  SPAM: [/\b(?:prize|winner|won|gift card|limited time offer|investment|returns|verify (?:your )?account|customs fee|bank details|deactivation)\b/i],
+  GENERAL: [/\b(?:no action required|status update|schedule update|sailing schedule|loading completed|berthing report|office resumes|time off)\b/i]
+});
+
+export function validateLearnedPhrase(phrase, email, category = null) {
   const source = `${email.subject ?? ''}\n${email.body ?? ''}`;
   if (!source.includes(phrase)) return { valid: false, reason: 'not_verbatim' };
   const normalizedPhrase = normalizePhrase(phrase);
@@ -23,6 +39,9 @@ export function validateLearnedPhrase(phrase, email) {
   if (GENERIC_PHRASES.includes(normalizedPhrase)) return { valid: false, reason: 'generic' };
   if (FORBIDDEN_PATTERNS.some((pattern) => pattern.test(phrase))) {
     return { valid: false, reason: 'sensitive_or_shipment_specific' };
+  }
+  if (category && !CATEGORY_RELEVANCE_PATTERNS[category]?.some((pattern) => pattern.test(phrase))) {
+    return { valid: false, reason: 'not_category_specific' };
   }
   return { valid: true, normalizedPhrase, tokenCount: words };
 }
@@ -53,7 +72,7 @@ export async function learnClassificationPhrases({
 }) {
   const outcomes = [];
   for (const phrase of evidencePhrases) {
-    const validation = validateLearnedPhrase(phrase, email);
+    const validation = validateLearnedPhrase(phrase, email, category);
     if (!validation.valid) {
       outcomes.push({ phrase, accepted: false, reason: validation.reason });
       continue;

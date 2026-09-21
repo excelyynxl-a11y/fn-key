@@ -15,6 +15,21 @@ test('accepts specific verbatim multi-word evidence', () => {
   });
 });
 
+test('requires learned evidence to be category-specific', () => {
+  assert.equal(
+    validateLearnedPhrase('check tomorrow schedule', email, 'BL_COMPARISON').reason,
+    'not_category_specific'
+  );
+  assert.equal(
+    validateLearnedPhrase('operational review', email, 'GENERAL').reason,
+    'not_category_specific'
+  );
+  assert.equal(
+    validateLearnedPhrase('revised sailing schedule', { body: 'revised sailing schedule' }, 'GENERAL').valid,
+    true
+  );
+});
+
 test('rejects generic, invented, sensitive, and shipment-specific evidence', () => {
   assert.equal(validateLearnedPhrase('Please', email).reason, 'too_short');
   assert.equal(validateLearnedPhrase('not in the message', email).reason, 'not_verbatim');

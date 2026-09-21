@@ -8,7 +8,8 @@ import {
 } from '../src/services/phraseKnowledgeService.js';
 
 test('normalizes unicode, separators, punctuation, and whitespace deterministically', () => {
-  assert.equal(normalizePhrase('  REQUEST_SI — Please!!!  '), 'request si - please');
+  assert.equal(normalizePhrase('  REQUEST_SI — Please!!!  '), 'request si please');
+  assert.equal(normalizePhrase('for checking asap.'), 'for checking asap');
   assert.equal(normalizePhrase('ＣＵＳＴ  SI'), 'cust si');
   assert.equal(tokenCount('draft bill of lading'), 4);
 });
