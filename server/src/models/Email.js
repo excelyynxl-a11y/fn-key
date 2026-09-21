@@ -18,8 +18,21 @@ const attachmentSchema = new mongoose.Schema({
     enum: ['pending', 'parsed', 'unreadable', 'unsupported'],
     default: 'pending'
   },
+  detectedFormat: { type: String, enum: ['txt', 'pdf', 'docx', 'xlsx'], default: null },
+  detectedMimeType: { type: String, default: null },
   extractedText: { type: String, default: null },
-  parserWarnings: { type: [String], default: [] }
+  parserWarnings: { type: [String], default: [] },
+  readabilityScore: { type: Number, min: 0, max: 1, default: null },
+  scanned: { type: Boolean, default: false },
+  parserMetadata: { type: mongoose.Schema.Types.Mixed, default: {} },
+  parserError: {
+    code: { type: String, default: null },
+    message: { type: String, default: null }
+  },
+  documentType: { type: String, enum: ['SI', 'BL', 'UNKNOWN'], default: 'UNKNOWN' },
+  roleMethod: { type: String, enum: ['rule', 'ai', 'human'], default: null },
+  roleScores: { type: Map, of: Number, default: {} },
+  roleEvidence: { type: [mongoose.Schema.Types.Mixed], default: [] }
 }, { _id: false });
 
 const extractedFieldSchema = new mongoose.Schema({
@@ -31,19 +44,29 @@ const extractedFieldSchema = new mongoose.Schema({
     page: { type: Number, default: null },
     sheet: { type: String, default: null },
     cell: { type: String, default: null },
-    line: { type: Number, default: null }
+    line: { type: Number, default: null },
+    paragraph: { type: Number, default: null },
+    table: { type: Number, default: null },
+    row: { type: Number, default: null },
+    column: { type: mongoose.Schema.Types.Mixed, default: null }
   },
   method: {
     type: String,
     enum: ['alias_rule', 'ai', 'human', 'missing'],
     default: 'missing'
   },
-  confidence: { type: Number, min: 0, max: 1, default: 0 }
+  confidence: { type: Number, min: 0, max: 1, default: 0 },
+  evidenceVerified: { type: Boolean, default: null },
+  candidates: { type: [mongoose.Schema.Types.Mixed], default: [] },
+  ambiguous: { type: Boolean, default: false }
 }, { _id: false });
 
 const documentSchema = new mongoose.Schema({
   attachmentReference: { type: String, default: null },
   documentType: { type: String, enum: ['SI', 'BL', 'UNKNOWN'], default: 'UNKNOWN' },
+  roleMethod: { type: String, enum: ['rule', 'ai', 'human'], default: null },
+  roleConfidence: { type: Number, min: 0, max: 1, default: null },
+  roleEvidence: { type: [mongoose.Schema.Types.Mixed], default: [] },
   fields: {
     type: Map,
     of: extractedFieldSchema,

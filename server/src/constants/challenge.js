@@ -29,10 +29,13 @@ export const COMPARISON_FIELDS = Object.freeze([
   'gross_weight_kg'
 ]);
 
-export const PIPELINE_VERSION = '2.0.0-stage-2';
+export const PIPELINE_VERSION = '3.0.0-stage-3';
 
 export const KNOWLEDGE_VERSION = 'email-phrases-2026-09-21';
 export const CLASSIFICATION_PROMPT_VERSION = 'email-category-v1';
+export const DOCUMENT_ROLE_PROMPT_VERSION = 'document-role-v1';
+export const DOCUMENT_FIELD_PROMPT_VERSION = 'document-fields-v1';
+export const DOCUMENT_AI_SCHEMA_VERSION = 'document-ai-v1';
 
 export const KNOWLEDGE_STATUSES = Object.freeze([
   'seed',

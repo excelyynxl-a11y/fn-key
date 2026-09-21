@@ -46,6 +46,7 @@ async function processOneEmail(email, repository, runId, classificationOptions) 
     await Email.updateOne({ emailId: email.emailId }, {
       $set: {
         processingState: 'completed',
+        'source.attachments': processed.attachments,
         classification: processed.classification,
         documents: processed.documents,
         result: processed.result,

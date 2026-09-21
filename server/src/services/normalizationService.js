@@ -1,28 +1,54 @@
 function normalizeWords(value) {
-  return value
+  return String(value ?? '')
     .normalize('NFKC')
     .toUpperCase()
-    .replace(/[.,;:()[\]{}]/g, ' ')
+    .replace(/[.,;:()[\]{}'"`]/g, ' ')
+    .replace(/[\/_-]+/g, ' ')
     .replace(/\s+/g, ' ')
     .trim();
 }
 
+const PORT_ALIASES = new Map([
+  ['NHAVA SHEVA INDIA', 'INNSA'],
+  ['CONAKRY GUINEA', 'GNCKY'],
+  ['NANTONG CHINA', 'CNNTG'],
+  ['BUATAN INDONESIA', 'IDBUA'],
+  ['BUSAN SOUTH KOREA', 'KRPUS'],
+  ['SINGAPORE', 'SGSIN'],
+  ['PYEONGTAEK SOUTH KOREA', 'KRPTK'],
+  ['APAPA NIGERIA', 'NGAPP'],
+  ['CALLAO PERU', 'PECLL']
+]);
+
+function isPlaceholder(value) {
+  return /^(?:N\s*\/?\s*A|TBA|TBD|UNKNOWN|[-_?\s]+)$/i.test(String(value ?? '').trim());
+}
+
 export function normalizeParty(value) {
-  return normalizeWords(value);
+  if (isPlaceholder(value)) return null;
+  return normalizeWords(value) || null;
 }
 
 export function normalizePort(value) {
-  const locode = value.toUpperCase().match(/\(([A-Z]{5})\)/)?.[1];
-  return locode ?? normalizeWords(value);
+  if (isPlaceholder(value)) return null;
+  const locode = String(value ?? '').toUpperCase().match(/\(([A-Z]{5})\)/)?.[1];
+  const normalized = normalizeWords(value);
+  return (locode ?? PORT_ALIASES.get(normalized) ?? normalized) || null;
 }
 
 export function normalizeContainerCount(value) {
-  const count = value.match(/(\d+)\s*[xX×]/)?.[1] ?? value.match(/\d+/)?.[0];
-  return count === undefined ? null : Number.parseInt(count, 10);
+  const text = String(value ?? '');
+  if (isPlaceholder(text)) return null;
+  const explicitCounts = [...text.matchAll(/(\d+)\s*[xX×]\s*(?=\d|[A-Z'])/gi)]
+    .map((match) => Number.parseInt(match[1], 10));
+  if (explicitCounts.length > 0) return explicitCounts.reduce((sum, count) => sum + count, 0);
+  const standalone = text.match(/^\s*(\d+)\s*(?:containers?|units?)?\s*$/i)?.[1];
+  return standalone === undefined ? null : Number.parseInt(standalone, 10);
 }
 
 export function normalizeGrossWeightKg(value) {
-  const match = value.replace(/,/g, '').match(/(-?\d+(?:\.\d+)?)\s*(KG|KGS|KILOGRAMS?|MT|MTS|TONS?|TONNES?)?/i);
+  const text = String(value ?? '').replace(/,/g, '').trim();
+  const match = text.match(/^(-?\d+(?:\.\d+)?)\s*(KG|KGS|KILOGRAMS?|MT|MTS|TONS?|TONNES?)?\.?$/i);
   if (!match) return null;
   const amount = Number.parseFloat(match[1]);
   if (!Number.isFinite(amount) || amount < 0) return null;

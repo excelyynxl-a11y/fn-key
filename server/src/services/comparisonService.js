@@ -4,8 +4,10 @@ export function compareDocuments(siFields, blFields) {
   const missingFields = COMPARISON_FIELDS.filter((field) => (
     siFields[field]?.normalizedValue === null
     || siFields[field]?.normalizedValue === undefined
+    || siFields[field]?.normalizedValue === ''
     || blFields[field]?.normalizedValue === null
     || blFields[field]?.normalizedValue === undefined
+    || blFields[field]?.normalizedValue === ''
   ));
 
   if (missingFields.length > 0) {
