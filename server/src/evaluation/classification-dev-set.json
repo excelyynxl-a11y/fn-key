@@ -1,0 +1,21 @@
+{
+  "name": "classification-dev-v1",
+  "source": "manual review of unambiguous inbox examples; sample submission labels were not used",
+  "examples": [
+    { "emailId": "email_001", "category": "BL_COMPARISON", "note": "explicit SI and draft BL comparison" },
+    { "emailId": "email_004", "category": "BL_COMPARISON", "note": "explicit draft BL confirmation request" },
+    { "emailId": "email_005", "category": "BL_COMPARISON", "note": "explicit instruction to verify BL against SI" },
+    { "emailId": "email_007", "category": "SI_REQUEST", "note": "full shipping instruction requesting a draft BL" },
+    { "emailId": "email_008", "category": "SI_REQUEST", "note": "shipping instruction needed" },
+    { "emailId": "email_014", "category": "SI_REQUEST", "note": "request SI subject and SI content" },
+    { "emailId": "email_002", "category": "INVOICE_QUERY", "note": "invoice and local charge breakdown question" },
+    { "emailId": "email_010", "category": "INVOICE_QUERY", "note": "freight billing breakdown question" },
+    { "emailId": "email_024", "category": "INVOICE_QUERY", "note": "invoice cancellation request" },
+    { "emailId": "email_011", "category": "GENERAL", "note": "outstanding document status update" },
+    { "emailId": "email_037", "category": "GENERAL", "note": "vessel loading update" },
+    { "emailId": "email_075", "category": "GENERAL", "note": "internal time-off notification" },
+    { "emailId": "email_015", "category": "SPAM", "note": "mailbox phishing message" },
+    { "emailId": "email_116", "category": "SPAM", "note": "investment and parcel-fee scam" },
+    { "emailId": "email_150", "category": "SPAM", "note": "unrelated promotional offer" }
+  ]
+}

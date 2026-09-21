@@ -1,12 +1,11 @@
-import express from "express";
-import { analyseEmailController } from "../controllers/emailController.js";
-import upload from "../middleware/uploadMiddleware.js";
+import express from 'express';
+import { getEmailController, listEmailsController } from '../controllers/emailController.js';
+import { retryEmailController } from '../controllers/reviewController.js';
 
 const router = express.Router();
 
-router.post(
-  '/analyse',
-  upload.single('email'),
-  analyseEmailController
-);
+router.get('/', listEmailsController);
+router.post('/:emailId/retry', retryEmailController);
+router.get('/:emailId', getEmailController);
+
 export default router;

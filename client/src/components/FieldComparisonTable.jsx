@@ -1,0 +1,67 @@
+const fields = [
+  ['shipper', 'Shipper'],
+  ['consignee', 'Consignee'],
+  ['notify_party', 'Notify party'],
+  ['port_of_loading', 'Port of loading'],
+  ['port_of_discharge', 'Port of discharge'],
+  ['container_count', 'Container count'],
+  ['gross_weight_kg', 'Gross weight (kg)']
+];
+
+function FieldValue({ field }) {
+  if (!field?.rawValue) return <span className="text-amber-700">Missing</span>;
+  const location = [
+    field.location?.page ? `page ${field.location.page}` : null,
+    field.location?.sheet ? `sheet ${field.location.sheet}` : null,
+    field.location?.cell ? `cell ${field.location.cell}` : null,
+    field.location?.line ? `line ${field.location.line}` : null
+  ].filter(Boolean).join(' · ') || 'location unavailable';
+  return (
+    <div className="min-w-0 break-words">
+      <p className="break-words font-medium text-slate-900">{field.rawValue}</p>
+      <p className="mt-1 text-xs text-slate-500">Normalized: <span className="break-all font-mono">{String(field.normalizedValue ?? 'unresolved')}</span></p>
+      <p className="mt-1 text-[11px] uppercase tracking-wide text-slate-400">
+        {field.method === 'ai' ? 'AI fallback' : 'Deterministic extraction'} · {Math.round((field.confidence ?? 0) * 100)}%
+      </p>
+      <details className="mt-2 text-xs text-slate-500">
+        <summary className="cursor-pointer font-medium text-blue-600">Source evidence</summary>
+        <p className="mt-1 break-words rounded-lg bg-sky-50 p-2 text-slate-600">{field.evidence}</p>
+        <p className="mt-1">{location}</p>
+      </details>
+    </div>
+  );
+}
+
+export default function FieldComparisonTable({ email }) {
+  const siFields = email.documents?.si?.fields ?? {};
+  const blFields = email.documents?.bl?.fields ?? {};
+  const defects = new Set(email.result?.defectFields ?? []);
+
+  return (
+    <div className="max-w-full overflow-x-hidden rounded-xl border border-sky-100 bg-white">
+      <table className="w-full table-fixed text-left text-sm">
+        <thead className="bg-sky-50 text-xs uppercase tracking-wide text-slate-500">
+          <tr>
+            <th className="w-1/4 break-words px-3 py-3">Field</th>
+            <th className="break-words px-3 py-3">Shipping instruction</th>
+            <th className="break-words px-3 py-3">Draft bill of lading</th>
+          </tr>
+        </thead>
+        <tbody className="divide-y divide-sky-100">
+          {fields.map(([key, label]) => (
+            <tr key={key} className={defects.has(key) ? 'bg-rose-50/70' : ''}>
+              <th className="break-words px-3 py-5 align-top font-semibold text-slate-800">
+                {label}
+                <span className={`ml-2 text-xs ${defects.has(key) ? 'text-rose-600' : (!siFields[key]?.rawValue || !blFields[key]?.rawValue) ? 'text-amber-600' : 'text-emerald-600'}`}>
+                  {defects.has(key) ? 'Mismatch' : (!siFields[key]?.rawValue || !blFields[key]?.rawValue) ? 'Unresolved' : 'Match'}
+                </span>
+              </th>
+              <td className="min-w-0 px-3 py-4 align-top"><FieldValue field={siFields[key]} /></td>
+              <td className="min-w-0 px-3 py-4 align-top"><FieldValue field={blFields[key]} /></td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+  );
+}

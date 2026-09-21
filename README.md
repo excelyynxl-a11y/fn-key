@@ -1,6 +1,8 @@
 # FN Key - MERN development environment
 
-Shared JavaScript development foundation for the team. It contains a minimal React page and Express API, with local MongoDB and hot reload. No application features or authentication are implemented. Existing hackathon documents and `sdoc-hackathon-bundle/` are reference material and are preserved.
+SDOC is an adaptive shipping-document verification application built on React, Express, and MongoDB. The Stage 5 build imports and processes the 520-email challenge bundle, explains every classification and document decision, queues unresolved cases for human correction, exposes reversible knowledge controls, and reports operational coverage, latency, cache, cost, and review metrics. Structured AI or vision is used only for unresolved classifications, document roles, or fields; validated results are cached and never directly choose the final status.
+
+The architecture is deterministic-first: auditable rules handle known evidence, structured AI handles uncertainty, and deterministic validation produces the final comparison status. This keeps routine processing fast and inexpensive without allowing model output to silently bypass the submission contract.
 
 ## Stack and prerequisites
 
@@ -18,13 +20,62 @@ cd <repository>
 docker compose up --build
 ```
 
-Defaults work immediately without an `.env` file. The first build downloads images and dependencies. MongoDB must become healthy before the API starts; the API must become healthy before the frontend starts.
+Create a root `.env` containing a reachable MongoDB URI before starting. The first build downloads images and dependencies. MongoDB must be reachable before the API starts; the API must become healthy before the frontend starts.
+
+```dotenv
+MONGO_URI=mongodb+srv://<user>:<password>@<cluster>/<database>
+# Required only when a classification, document role, or field needs AI fallback.
+OPENAI_API_KEY=
+OPENAI_MODEL=gpt-5.5
+```
 
 - Frontend: http://localhost:5173
-- Backend: http://localhost:5000 — `GET /` returns `{"message":"API is running"}`.
+- Backend: http://localhost:5000 — `GET /` returns the SDOC API identity envelope.
 - Readiness: http://localhost:5000/health — returns 200 when MongoDB is connected, otherwise 503.
 
-Host ports bind to loopback for local development. Container services use the Compose internal network; the backend connects to `mongodb:27017`, never `localhost`. Browser JavaScript uses the host API URL, because the browser cannot resolve Compose service names.
+Host ports bind to loopback for local development. The backend uses `MONGO_URI` to connect to MongoDB Atlas or another reachable MongoDB deployment. Browser JavaScript uses the host API URL, because the browser cannot resolve Compose service names. The challenge bundle is mounted read-only at `/data/sdoc` inside the API container.
+
+## Operations workflow
+
+1. Open http://localhost:5173.
+2. Select **Start new run**.
+3. The API classifies each message, parses supported attachment formats, resolves SI/BL roles, and extracts and normalizes the seven comparison fields.
+   An active run can be stopped from the progress panel; no new emails are scheduled after cancellation is requested.
+4. Select an inbox row to inspect classification evidence, parser outcomes, field values, page/sheet/cell/line evidence, extraction method, confidence, and final status.
+5. Download a completed run's exact submission object from `GET /api/runs/:runId/submission`.
+6. Resolve review cases with a required note and preview the deterministic outcome before saving.
+7. Inspect the retained review history; retry one resolved email or reopen its case when new evidence arrives.
+8. Inspect persisted run metrics and export the updated submission from the dashboard.
+
+AI evidence must occur verbatim in the source text whenever embedded text is available. New classification phrases are rejected when they are generic, sensitive, shipment-specific, too long, or conflicting; accepted phrases begin in low-weight probation. Document AI requests contain only unresolved roles or fields, use strict schemas, and are cached by source hash, model, prompt, schema, and requested fields. Scanned evidence that cannot be verified locally remains `NEEDS_REVIEW`.
+
+Supported attachment handling:
+
+- TXT preserves line numbers and detects invalid UTF-8 replacement characters.
+- PDF extracts embedded text by page, detects sparse/scanned content, and enforces a page limit.
+- DOCX preserves paragraph and table-cell reading order.
+- XLSX inspects all non-empty sheets and preserves sheet/cell relationships.
+- File signatures are checked independently of extensions; unsupported, corrupt, encrypted, empty, and scanned outcomes remain distinguishable.
+
+Implemented API paths:
+
+| Method | Path | Purpose |
+| --- | --- | --- |
+| `POST` | `/api/runs` | Start an asynchronous bundle run |
+| `GET` | `/api/runs` | List processing runs |
+| `GET` | `/api/runs/:runId` | Poll run progress |
+| `POST` | `/api/runs/:runId/retry` | Retry failed and review items |
+| `POST` | `/api/runs/:runId/cancel` | Cooperatively stop an active run |
+| `GET` | `/api/runs/:runId/submission` | Validate and export submission JSON |
+| `POST` | `/api/runs/:runId/submission/validate` | Validate schema and exact email-ID coverage without downloading |
+| `GET` | `/api/runs/:runId/metrics` | Return coverage, AI, cache, latency, cost, and review metrics |
+| `GET` | `/api/emails?runId=...` | List results for a run |
+| `GET` | `/api/emails/:emailId` | Inspect one complete result |
+| `POST` | `/api/emails/:emailId/retry` | Reprocess one email with saved review overrides |
+| `GET/PATCH` | `/api/reviews[/:reviewId]` | List, inspect, preview, and resolve review cases with optimistic version checks |
+| `POST` | `/api/reviews/:reviewId/reopen` | Reopen a resolved review with a required reason and version check |
+| `GET/PATCH` | `/api/knowledge[/:id]` | Inspect and moderate adaptive knowledge |
+| `GET` | `/api/knowledge/audit` | Inspect immutable learning and moderation events |
 
 ## Daily commands
 
@@ -38,6 +89,24 @@ docker compose logs -f              # Follow logs
 docker compose ps                   # Show service health
 docker compose config --quiet       # Validate configuration
 ```
+
+Run the focused checks and the manually labeled classification evaluation from the repository root:
+
+```sh
+cd server && npm test
+npm run evaluate:classification
+cd ../client && npm run build
+```
+
+Export and independently validate a completed run from `server/`:
+
+```sh
+npm run submission:export -- <runId> submission.json http://localhost:5000
+npm run submission:validate -- submission.json ../sdoc-hackathon-bundle
+npm audit --omit=dev
+```
+
+Evaluation evidence and the rehearsable demo package are in [`docs/EVALUATION_LOG.md`](docs/EVALUATION_LOG.md), [`docs/DEMO_SCRIPT.md`](docs/DEMO_SCRIPT.md), and [`docs/PRESENTATION.md`](docs/PRESENTATION.md).
 
 Use Ctrl+C to stop an attached run. After Dockerfile or dependency changes, use `docker compose up --build`. Edit files under `client/src/` and `server/src/` on your host for hot reload; no rebuild is needed. Vite listens on `0.0.0.0`; polling is enabled for Docker Desktop mounts, and Nodemon polls the backend files.
 
@@ -55,36 +124,51 @@ This uses Tailwind 4: no separate Tailwind or PostCSS configuration file is need
 
 ## Environment variables
 
-Compose reads an optional root `.env` to override defaults in `docker-compose.yml` and explicitly passes variables to containers. To customize, copy `.env.example` to `.env` (`Copy-Item .env.example .env` in PowerShell or `cp .env.example .env` in a POSIX shell). The local `.env` is ignored by Git; commit only `.env.example`.
+Compose reads a root `.env` and explicitly passes configuration to containers. Keep the local `.env` untracked and never commit real credentials.
 
 | Variable | Default | Purpose |
 | --- | --- | --- |
 | `PORT` | `5000` | API container and host port |
 | `CLIENT_PORT` | `5173` | Frontend host port |
-| `MONGO_URI` | `mongodb://mongodb:27017/mern_database` | API database connection |
+| `MONGO_URI` | Required | MongoDB Atlas or other reachable MongoDB connection string |
 | `CLIENT_ORIGIN` | `http://localhost:5173` | Allowed browser origin for CORS |
 | `VITE_API_URL` | `http://localhost:5000` | API URL used by the browser |
 | `WATCH_USE_POLLING` | `true` | Vite polling for mounted files |
+| `OPENAI_API_KEY` | Empty | Used only for uncertain classifications, document roles, or fields |
+| `OPENAI_MODEL` | `gpt-5.5` | Configurable Responses API model |
+| `OPENAI_MAX_ATTEMPTS` | `3` | Maximum structured-AI attempts for transient failures |
+| `OPENAI_TIMEOUT_MS` | `20000` | Timeout per AI attempt in milliseconds |
+| `JSON_BODY_LIMIT` | `1mb` | Maximum JSON request body accepted by Express |
+| `API_RATE_LIMIT_MAXIMUM` | `300` | Requests allowed per client within one rate-limit window |
+| `API_RATE_LIMIT_WINDOW_MS` | `60000` | Rate-limit window in milliseconds |
+| `OPENAI_INPUT_COST_PER_MILLION` | `0` | Optional input-token price used for estimated cost |
+| `OPENAI_OUTPUT_COST_PER_MILLION` | `0` | Optional output-token price used for estimated cost |
+| `CLASSIFICATION_MIN_SCORE` | `4` | Minimum deterministic winning score |
+| `CLASSIFICATION_MIN_MARGIN` | `1.5` | Minimum lead over the second category |
+| `PROCESSING_CONCURRENCY` | `4` | Maximum emails processed concurrently |
+| `DATASET_PATH` | `/data/sdoc` in Compose | Read-only challenge bundle location |
 
 If changing `PORT`, also update `VITE_API_URL`. If changing `CLIENT_PORT`, update `CLIENT_ORIGIN`. Run `docker compose up -d` after changing root environment values so containers are recreated with the new settings. Vite exposes `VITE_` variables to the browser: never place secrets in them. The backend also supports dotenv for optional direct Node execution; Docker supplies its environment through Compose.
 
 ## MongoDB and persistence
 
-MongoDB listens on port 27017 only inside Docker; it is not published to the host. Data resides in the named `mongodb_data` volume (prefixed by the Compose project name). Normal restarts, rebuilds and `docker compose down` preserve it. MongoDB creates the database when the first data is written.
+Email records, processing runs, extracted fields, comparison results, review history, and per-attempt operational metrics are persisted through Mongoose. Completed-run metric snapshots remain available after a later run claims the current email records. Dataset imports use `emailId` upserts, so rerunning the same source does not create duplicate email documents. MongoDB network access must allow the API host; if Atlas reports that no server can be reached, check its network access list and credentials.
 
-```sh
-docker compose exec mongodb mongosh mern_database
-```
+## Security, privacy, and limitations
 
-For a deliberate full reset, `docker compose down -v` removes ALL project volumes, including database data and dependency caches. This is destructive; use normal `down` to keep data.
+- Source documents are processed locally from the configured dataset root; path traversal, extension/signature mismatch, oversized parser inputs, and excessive OOXML expansion are rejected.
+- API responses include request IDs. Browser origins use an exact allowlist, JSON bodies are bounded, API traffic is rate limited, and routine server logs do not print document bodies or credentials.
+- AI requests contain only the material required for the unresolved classification, role, or field. Provider credentials remain server-side.
+- Learned category knowledge currently uses exact normalized phrase matching. Sentence-length phrases may generalize poorly to differently worded datasets; this is recorded in the evaluation log and should be addressed with bounded concept/n-gram learning before production use.
+- Scanned documents without locally verifiable evidence remain `NEEDS_REVIEW`. Authentication, multi-user authorization, live email-provider ingestion, and distributed workers remain post-hackathon work.
 
 ## Structure
 
 ```text
 client/
   src/
-    components/          # Future shared UI
-    pages/               # Future pages
+    components/          # Run progress, inbox, status and comparison UI
+    pages/               # Stage 4 operations and review dashboard
     services/api.js      # Shared fetch helper
     App.jsx
     main.jsx
@@ -96,10 +180,14 @@ client/
 server/
   src/
     config/db.js
-    controllers/         # Future API controllers
+    constants/           # Challenge enums and pipeline version
+    controllers/         # Run and email APIs
     middleware/
-    models/
+    models/              # Email, run, knowledge, AI cache and audit persistence
+    repositories/        # Safe dataset access
     routes/
+    schemas/             # Zod request/output contracts
+    services/            # Import, parsers, adaptive AI fallbacks, extraction, comparison, run and export logic
     app.js
   server.js
   nodemon.json
@@ -107,7 +195,6 @@ server/
   package.json
   package-lock.json
 docker-compose.yml
-.env.example
 .gitignore
 README.md
 ```
@@ -118,7 +205,7 @@ Empty extension directories contain `.gitkeep` only. Both apps have `.dockerigno
 
 - **Cannot connect to Docker:** start Docker Desktop, wait for its engine and check `docker info`. Use Linux containers.
 - **Port already allocated:** stop the conflicting program or change the environment variables together as described above.
-- **API waiting or failing:** inspect `docker compose logs mongodb server`. The Docker MongoDB hostname must be `mongodb`. Check registry/network access if `npm ci` fails.
+- **API waiting or failing:** inspect `docker compose logs server`. Confirm that `MONGO_URI` is valid and the API host is allowed by MongoDB Atlas. Check registry/network access if `npm ci` fails.
 - **Changes not appearing:** check Docker Desktop file sharing and confirm the repository is the mounted folder. Polling is enabled by default. Environment changes require container recreation.
 - **Missing dependencies after switching branches:** restart the affected app with `docker compose restart client server`; startup `npm ci` resynchronizes dependencies. Rebuild if the image or Dockerfile changed.
 - **CORS errors:** `CLIENT_ORIGIN` must exactly match the browser's origin, including scheme and port. Use `localhost` consistently.
