@@ -1,16 +1,16 @@
 import { CircleAlert, CircleCheck, CircleX, Clock, LoaderCircle, TriangleAlert } from 'lucide-react';
 
 const styles = {
-  OK: 'border-emerald-800 bg-emerald-500/10 text-emerald-300',
-  MISMATCH: 'border-rose-800 bg-rose-500/10 text-rose-300',
-  NEEDS_REVIEW: 'border-amber-800 bg-amber-500/10 text-amber-300',
-  completed: 'border-emerald-800 bg-emerald-500/10 text-emerald-300',
-  completed_with_errors: 'border-amber-800 bg-amber-500/10 text-amber-300',
-  running: 'border-blue-800 bg-blue-500/10 text-blue-300',
-  cancelling: 'border-amber-800 bg-amber-500/10 text-amber-300',
-  cancelled: 'border-slate-700 bg-slate-500/10 text-slate-300',
-  queued: 'border-blue-800 bg-blue-950/70 text-blue-300',
-  failed: 'border-rose-800 bg-rose-500/10 text-rose-300'
+  OK: 'border-emerald-200 bg-emerald-50 text-emerald-700',
+  MISMATCH: 'border-rose-200 bg-rose-50 text-rose-700',
+  NEEDS_REVIEW: 'border-amber-200 bg-amber-50 text-amber-700',
+  completed: 'border-emerald-200 bg-emerald-50 text-emerald-700',
+  completed_with_errors: 'border-amber-200 bg-amber-50 text-amber-700',
+  running: 'border-blue-200 bg-blue-50 text-blue-700',
+  cancelling: 'border-amber-200 bg-amber-50 text-amber-700',
+  cancelled: 'border-slate-200 bg-slate-50 text-slate-600',
+  queued: 'border-blue-200 bg-blue-50 text-blue-700',
+  failed: 'border-rose-200 bg-rose-50 text-rose-700'
 };
 
 const icons = {
@@ -27,10 +27,10 @@ const icons = {
 };
 
 export default function StatusBadge({ value }) {
-  if (!value) return <span className="text-blue-400/60">Pending</span>;
+  if (!value) return <span className="text-slate-400">Pending</span>;
   const Icon = icons[value] ?? CircleAlert;
   return (
-    <span className={`inline-flex items-center gap-1 rounded-md border px-2.5 py-1 text-xs font-semibold ${styles[value] ?? 'border-blue-800 bg-blue-950/70 text-blue-300'}`}>
+    <span className={`inline-flex items-center gap-1 rounded-lg border px-2.5 py-1 text-xs font-semibold ${styles[value] ?? 'border-sky-200 bg-sky-50 text-blue-700'}`}>
       <Icon className={`size-3.5 ${['running', 'cancelling'].includes(value) ? 'animate-spin' : ''}`} aria-hidden="true" />
       {value.replaceAll('_', ' ')}
     </span>

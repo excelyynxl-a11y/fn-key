@@ -33,7 +33,7 @@ const Sidebar = ({ activeView, onNavigate }) => {
         )}
       </div>
 
-      <nav aria-label="Primary navigation" className="flex min-h-[calc(100vh-85px)] flex-col px-3 py-5 lg:px-4">
+      <nav aria-label="Primary navigation" className="flex flex-col px-3 py-5 lg:min-h-[calc(100vh-85px)] lg:px-4">
         {!collapsed && <p className="px-3 text-[11px] font-bold uppercase tracking-[0.18em] text-slate-400">Workspace</p>}
         <ul className="mt-3 space-y-2">
           {navigation.map(({ id, label, icon: Icon }) => (

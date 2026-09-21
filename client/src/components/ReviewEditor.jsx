@@ -5,7 +5,7 @@ import { request } from '../services/api.js';
 const categories = ['BL_COMPARISON', 'SI_REQUEST', 'INVOICE_QUERY', 'GENERAL', 'SPAM'];
 const fields = ['shipper', 'consignee', 'notify_party', 'port_of_loading', 'port_of_discharge', 'container_count', 'gross_weight_kg'];
 
-const controlClass = 'rounded-md border border-amber-800 bg-[#0a1526] px-3 py-2 text-sm text-blue-100 outline-none focus:border-amber-600';
+const controlClass = 'min-h-11 rounded-xl border border-amber-200 bg-white px-3 text-sm text-slate-700 outline-none focus:border-amber-400 focus:ring-2 focus:ring-amber-100';
 
 export default function ReviewEditor({ review, email, onComplete }) {
   const attachments = email.source?.attachments ?? [];
@@ -52,9 +52,9 @@ export default function ReviewEditor({ review, email, onComplete }) {
   }
 
   return (
-    <section className="mt-5 rounded-md border border-amber-800 bg-amber-950/30 p-4">
+    <section className="mt-6 rounded-xl border border-amber-200 bg-amber-50 p-5">
       <div className="flex flex-wrap items-center justify-between gap-2">
-        <div><h3 className="flex items-center gap-2 text-sm font-semibold text-amber-200"><PencilLine className="size-4" /> Resolve review</h3><p className="mt-1 text-xs text-amber-300/80">{review.reviewReason.replaceAll('_', ' ')} · {review.stage.replaceAll('_', ' ')}</p></div>
+        <div><h3 className="flex items-center gap-2 text-sm font-semibold text-amber-950"><PencilLine className="size-4 text-amber-600" /> Resolve review</h3><p className="mt-1 text-xs text-amber-700">{review.reviewReason.replaceAll('_', ' ')} · {review.stage.replaceAll('_', ' ')}</p></div>
         <select className={controlClass} value={correctionType} onChange={(event) => setCorrectionType(event.target.value)}>
           <option value="field">Correct a field</option><option value="category">Correct category</option><option value="roles">Correct SI/BL roles</option>
         </select>
@@ -69,23 +69,23 @@ export default function ReviewEditor({ review, email, onComplete }) {
       )}
       {correctionType === 'roles' && (
         <div className="mt-3 grid gap-2 sm:grid-cols-2">
-          <label className="text-xs text-amber-200/90">Shipping instruction<select className={`mt-1 w-full ${controlClass}`} value={siReference} onChange={(event) => setSiReference(event.target.value)}>{attachments.map((item) => <option key={item.reference} value={item.reference}>{item.filename}</option>)}</select></label>
-          <label className="text-xs text-amber-200/90">Bill of lading<select className={`mt-1 w-full ${controlClass}`} value={blReference} onChange={(event) => setBlReference(event.target.value)}>{attachments.map((item) => <option key={item.reference} value={item.reference}>{item.filename}</option>)}</select></label>
+          <label className="text-xs text-amber-800">Shipping instruction<select className={`mt-1 w-full ${controlClass}`} value={siReference} onChange={(event) => setSiReference(event.target.value)}>{attachments.map((item) => <option key={item.reference} value={item.reference}>{item.filename}</option>)}</select></label>
+          <label className="text-xs text-amber-800">Bill of lading<select className={`mt-1 w-full ${controlClass}`} value={blReference} onChange={(event) => setBlReference(event.target.value)}>{attachments.map((item) => <option key={item.reference} value={item.reference}>{item.filename}</option>)}</select></label>
         </div>
       )}
       <textarea className={`mt-3 min-h-20 w-full ${controlClass}`} placeholder="Required reviewer note explaining the decision" value={note} onChange={(event) => setNote(event.target.value)} />
       {correctionType === 'category' && (
-        <div className="mt-3 rounded-md border border-amber-800 bg-[#0a1526] p-3 text-xs text-blue-200/80">
+        <div className="mt-4 rounded-xl border border-amber-200 bg-white p-4 text-xs text-slate-600">
           <label className="flex items-center gap-2"><input type="checkbox" checked={learn} onChange={(event) => setLearn(event.target.checked)} />Add a reversible probation phrase from this correction</label>
-          {learn && <input className="mt-2 w-full rounded-md border border-amber-800 bg-blue-950/50 px-3 py-2 text-blue-100" placeholder="Exact category-specific phrase from subject or body" value={learningPhrase} onChange={(event) => setLearningPhrase(event.target.value)} />}
+          {learn && <input className="mt-3 min-h-11 w-full rounded-xl border border-amber-200 bg-white px-3 text-slate-700" placeholder="Exact category-specific phrase from subject or body" value={learningPhrase} onChange={(event) => setLearningPhrase(event.target.value)} />}
         </div>
       )}
-      {preview && <p className="mt-2 rounded-md border border-amber-800 bg-[#0a1526] p-2 text-xs text-blue-200/80">Preview: <strong className="text-white">{preview.status}</strong>{preview.reviewReason ? ` · ${preview.reviewReason.replaceAll('_', ' ')}` : ''}{preview.defectFields?.length ? ` · ${preview.defectFields.join(', ')}` : ''}</p>}
-      {error && <p className="mt-2 text-xs text-rose-300">{error}</p>}
+      {preview && <p className="mt-3 rounded-xl border border-amber-200 bg-white p-3 text-xs text-slate-600">Preview: <strong className="text-slate-950">{preview.status}</strong>{preview.reviewReason ? ` · ${preview.reviewReason.replaceAll('_', ' ')}` : ''}{preview.defectFields?.length ? ` · ${preview.defectFields.join(', ')}` : ''}</p>}
+      {error && <p className="mt-2 text-xs text-rose-700">{error}</p>}
       <div className="mt-3 flex flex-wrap gap-2">
-        <button type="button" disabled={busy || note.trim().length < 3} onClick={() => submit(true)} className="inline-flex items-center gap-1.5 rounded-md border border-amber-700 bg-amber-950/50 px-3 py-2 text-xs font-semibold text-amber-200 hover:bg-amber-900/40 disabled:opacity-40"><Eye className="size-3.5" /> Preview correction</button>
-        <button type="button" disabled={busy || note.trim().length < 3} onClick={() => submit(false)} className="inline-flex items-center gap-1.5 rounded-md bg-amber-600 px-3 py-2 text-xs font-semibold text-white hover:bg-amber-500 disabled:opacity-40"><Save className="size-3.5" /> Save and reprocess</button>
-        <button type="button" disabled={busy || note.trim().length < 3} onClick={() => submit(false, 'confirm')} className="inline-flex items-center gap-1.5 rounded-md border border-blue-800 bg-blue-950/50 px-3 py-2 text-xs font-semibold text-blue-200 hover:bg-blue-900/50 disabled:opacity-40"><CheckCheck className="size-3.5" /> Confirm existing review</button>
+        <button type="button" disabled={busy || note.trim().length < 3} onClick={() => submit(true)} className="inline-flex min-h-10 items-center gap-2 rounded-xl border border-amber-300 bg-white px-4 text-xs font-semibold text-amber-800 hover:bg-amber-100 disabled:opacity-40"><Eye className="size-3.5" /> Preview correction</button>
+        <button type="button" disabled={busy || note.trim().length < 3} onClick={() => submit(false)} className="inline-flex min-h-10 items-center gap-2 rounded-xl bg-amber-600 px-4 text-xs font-semibold text-white hover:bg-amber-700 disabled:opacity-40"><Save className="size-3.5" /> Save and reprocess</button>
+        <button type="button" disabled={busy || note.trim().length < 3} onClick={() => submit(false, 'confirm')} className="inline-flex min-h-10 items-center gap-2 rounded-xl border border-sky-200 bg-white px-4 text-xs font-semibold text-blue-700 hover:bg-sky-50 disabled:opacity-40"><CheckCheck className="size-3.5" /> Confirm existing review</button>
       </div>
     </section>
   );

@@ -215,7 +215,7 @@ const LandingPage = () => {
             type="button"
             onClick={startRun}
             disabled={busy || ['queued', 'running', 'cancelling'].includes(run?.state)}
-            className="inline-flex items-center gap-2 rounded-md bg-blue-600 px-5 py-3 text-sm font-semibold text-white shadow-sm transition hover:bg-blue-500 disabled:cursor-not-allowed disabled:bg-blue-900 disabled:text-blue-300/60"
+            className="inline-flex min-h-12 items-center gap-2 rounded-xl bg-blue-600 px-6 text-sm font-semibold text-white shadow-lg shadow-blue-200 transition hover:-translate-y-0.5 hover:bg-blue-700 disabled:cursor-not-allowed disabled:bg-slate-300 disabled:text-slate-500 disabled:shadow-none"
           >
             {['queued', 'running', 'cancelling'].includes(run?.state)
               ? <><LoaderCircle className="size-4 animate-spin" /> Processing…</>
@@ -226,13 +226,13 @@ const LandingPage = () => {
         {activeView === 'knowledge' ? (
           <div className="mt-10"><KnowledgePanel /></div>
         ) : <>
-        {error && <div className="mt-6 rounded-md border border-rose-900/60 bg-rose-950/40 px-4 py-3 text-sm text-rose-300">{offline ? 'Offline: ' : ''}{error}</div>}
+        {error && <div className="mt-6 rounded-xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700">{offline ? 'Offline: ' : ''}{error}</div>}
         {run?.runErrors?.length > 0 && (
-          <div className="mt-4 rounded-md border border-amber-900/60 bg-amber-950/40 px-4 py-3 text-sm text-amber-300">
+          <div className="mt-4 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800">
             Partial errors: {run.runErrors.slice(0, 3).map(({ emailId, message }) => `${emailId ?? 'run'}: ${message}`).join(' · ')}
           </div>
         )}
-        {busy && !run && <p className="mt-10 text-sm text-blue-300/60">Loading workspace…</p>}
+        {busy && !run && <p className="mt-10 text-sm text-slate-500">Loading workspace…</p>}
 
         {run && <div className="mt-8"><RunProgress run={run} onFilter={applySummaryFilter} onRetry={retryRun} retrying={retrying} onExport={exportSubmission} onCancel={cancelRun} cancelling={cancelling} /></div>}
 
@@ -244,15 +244,15 @@ const LandingPage = () => {
         )}
 
         {!run && !busy && (
-          <section className="mt-8 rounded-lg border border-dashed border-blue-800 bg-blue-950/30 p-10 text-center">
-            <h2 className="text-lg font-semibold text-white">No processing run yet</h2>
-            <p className="mt-2 text-sm text-blue-300/70">Start a run to import and process the 520-email challenge bundle.</p>
+          <section className="mt-10 rounded-2xl border border-dashed border-blue-200 bg-white p-14 text-center shadow-sm">
+            <h2 className="text-xl font-semibold text-slate-950">No processing run yet</h2>
+            <p className="mt-2 text-sm text-slate-500">Start a run to import and process the 520-email challenge bundle.</p>
           </section>
         )}
 
         {run && terminalRunStates.includes(run.state) && (
-          <div className="mt-8 grid gap-6 xl:grid-cols-[minmax(360px,0.8fr)_minmax(0,1.5fr)]">
-            <div className="space-y-3">
+          <div className="mt-10 grid gap-8 xl:grid-cols-[minmax(390px,0.85fr)_minmax(0,1.55fr)]">
+            <div className="space-y-5">
               <InboxFilters
                 value={filterDraft}
                 onChange={setFilterDraft}
@@ -268,18 +268,18 @@ const LandingPage = () => {
                 onPage={(nextPage) => applyFilters(appliedFilters, nextPage)}
               />
             </div>
-            <section className="min-w-0 rounded-lg border border-blue-900/60 bg-[#0a1526] p-5 shadow-sm">
+            <section className="min-w-0 rounded-2xl border border-sky-100 bg-white p-6 shadow-sm shadow-sky-100/70 lg:p-8">
               {selectedEmail ? (
                 <>
                   <div className="flex flex-wrap items-start justify-between gap-4">
                     <div>
                       <p className="font-mono text-xs text-blue-500">{selectedEmail.emailId}</p>
-                      <h2 className="mt-1 text-xl font-semibold text-white">{selectedEmail.source?.subject}</h2>
-                      <p className="mt-1 text-sm text-blue-300/70">From {selectedEmail.source?.from}</p>
+                      <h2 className="mt-2 text-2xl font-semibold leading-snug text-slate-950">{selectedEmail.source?.subject}</h2>
+                      <p className="mt-2 text-sm text-slate-500">From {selectedEmail.source?.from}</p>
                     </div>
                     <StatusBadge value={selectedEmail.result?.status} />
                   </div>
-                  <div className="mt-5 rounded-md bg-blue-950/50 p-4 text-sm text-blue-200/80">
+                  <div className="mt-6 rounded-xl border border-sky-100 bg-sky-50 p-4 text-sm text-slate-700">
                     <span className="font-semibold">Classification:</span>{' '}
                     {selectedEmail.result?.category?.replaceAll('_', ' ')} via {selectedEmail.classification?.method}
                     {selectedEmail.result?.reviewReason && <span> · {selectedEmail.result.reviewReason.replaceAll('_', ' ')}</span>}
@@ -291,7 +291,7 @@ const LandingPage = () => {
                   )}
                   {selectedEmail.result?.category === 'BL_COMPARISON' && selectedEmail.documents?.si?.fields
                     ? <div className="mt-5"><FieldComparisonTable email={selectedEmail} /></div>
-                    : <p className="mt-6 text-sm text-blue-300/60">
+                    : <p className="mt-6 text-sm text-slate-500">
                         {selectedEmail.result?.category === 'BL_COMPARISON'
                           ? 'Field comparison stopped at the review reason shown above.'
                           : 'This category does not continue to document comparison.'}
@@ -311,7 +311,7 @@ const LandingPage = () => {
                     />
                   )}
                 </>
-              ) : <p className="text-sm text-blue-300/60">Select an email to inspect it.</p>}
+              ) : <p className="text-sm text-slate-500">Select an email to inspect it.</p>}
             </section>
           </div>
         )}

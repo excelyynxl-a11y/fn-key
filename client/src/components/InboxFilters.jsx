@@ -4,7 +4,7 @@ const categories = ['', 'BL_COMPARISON', 'SI_REQUEST', 'INVOICE_QUERY', 'GENERAL
 const statuses = ['', 'OK', 'MISMATCH', 'NEEDS_REVIEW'];
 const reviewReasons = ['', 'wrong_doc_type', 'missing_attachment', 'unreadable', 'missing_value'];
 
-const inputClass = 'rounded-md border border-blue-800 bg-blue-950/50 px-3 py-2 text-sm text-blue-100 placeholder:text-blue-400/50 outline-none focus:border-blue-500';
+const inputClass = 'min-h-11 rounded-xl border border-sky-200 bg-white px-3 text-sm text-slate-700 shadow-sm outline-none placeholder:text-slate-400 focus:border-blue-400 focus:ring-2 focus:ring-blue-100';
 
 function optionLabel(value, fallback) {
   return value ? value.replaceAll('_', ' ') : fallback;
@@ -20,8 +20,8 @@ export default function InboxFilters({ value, onChange, onApply, onClear }) {
   }
 
   return (
-    <form className="rounded-lg border border-blue-900/60 bg-[#0a1526] p-4 shadow-sm" onSubmit={(event) => { event.preventDefault(); onApply(); }}>
-      <div className="grid gap-2 sm:grid-cols-2 xl:grid-cols-3">
+    <form className="rounded-2xl border border-sky-100 bg-white p-5 shadow-sm shadow-sky-100/70" onSubmit={(event) => { event.preventDefault(); onApply(); }}>
+      <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
         <input
           aria-label="Search inbox"
           className={inputClass}
@@ -49,9 +49,9 @@ export default function InboxFilters({ value, onChange, onApply, onClear }) {
           <option value="human">Human</option>
         </select>
       </div>
-      <div className="mt-3 flex gap-2">
-        <button type="submit" className="inline-flex items-center gap-1.5 rounded-md bg-blue-600 px-3 py-2 text-xs font-semibold text-white hover:bg-blue-500"><ListFilter className="size-3.5" /> Apply filters</button>
-        <button type="button" onClick={onClear} className="inline-flex items-center gap-1.5 rounded-md border border-blue-800 bg-blue-950/50 px-3 py-2 text-xs font-semibold text-blue-200 hover:bg-blue-900/50"><X className="size-3.5" /> Clear</button>
+      <div className="mt-4 flex gap-2">
+        <button type="submit" className="inline-flex min-h-10 items-center gap-2 rounded-xl bg-blue-600 px-4 text-xs font-semibold text-white hover:bg-blue-700"><ListFilter className="size-3.5" /> Apply filters</button>
+        <button type="button" onClick={onClear} className="inline-flex min-h-10 items-center gap-2 rounded-xl border border-sky-200 bg-white px-4 text-xs font-semibold text-slate-600 hover:bg-sky-50"><X className="size-3.5" /> Clear</button>
       </div>
     </form>
   );
