@@ -22,31 +22,58 @@ The core design is **deterministic first, AI only when needed**. Auditable rules
 
 ## Technical Architecture
 
-```mermaid
-flowchart LR
-    U[Operations user] --> UI[React 19 dashboard]
-    UI --> API[Express 5 API]
-    API --> RUN[Run orchestration]
-    API --> REVIEW[Review and knowledge APIs]
+```text
+USER AND API
 
-    RUN --> INGEST[Safe dataset ingestion]
-    INGEST --> CLASSIFY[Deterministic email classifier]
-    CLASSIFY -->|uncertain only| AI[Structured OpenAI fallback]
-    CLASSIFY --> PARSE[TXT / PDF / DOCX / XLSX parsers]
-    PARSE --> ROLES[SI / BL role resolution]
-    ROLES --> EXTRACT[Seven-field extraction]
-    ROLES -->|unresolved only| AI
-    EXTRACT -->|missing fields only| AI
-    EXTRACT --> NORMALIZE[Field-specific normalization]
-    NORMALIZE --> COMPARE[Deterministic comparison]
-    COMPARE --> OUTPUT[OK / MISMATCH / NEEDS_REVIEW]
+[Operations user] --> [React 19 operations UI] --> [Express 5 API]
+                         Runs / Inbox / Review      Run / Email / Review
+                         Knowledge / Metrics        Knowledge / Metrics
 
-    AI --> CACHE[(Content-addressed AI cache)]
-    RUN --> DB[(MongoDB)]
-    REVIEW --> DB
-    CACHE --> DB
-    DB --> UI
+MAIN PROCESSING PATH
+
+[Safe dataset ingestion]
+          |
+          v
+[Deterministic email classification]
+          |
+          v
+[TXT / PDF / DOCX / XLSX parsing]
+          |
+          v
+[SI / BL role resolution]
+          |
+          v
+[Seven-field extraction]
+          |
+          v
+[Field-specific normalization]
+          |
+          v
+[Deterministic comparison] --> [OK | MISMATCH | NEEDS_REVIEW]
+                                      |
+                                      v
+                         [Dashboard / Metrics / Export]
+
+SELECTIVE AI PATH
+
+[Uncertain classification] --\
+[Unresolved document role] ----> [Structured OpenAI fallback]
+[Missing document fields] ----/              |
+                                               v
+                              [Schema + evidence validation]
+                                               |
+                                               v
+                              [Content-addressed AI cache]
+                                               |
+                                               v
+                                   [Resume main pipeline]
+
+PERSISTENCE
+
+[MongoDB] <--> Runs / Emails / Reviews / Knowledge / Audit events / AI cache
 ```
+
+AI is deliberately a side path rather than the main pipeline: it is invoked only when deterministic classification, role detection, or field extraction cannot resolve the evidence. Accepted responses are schema-validated, evidence-checked, and cached before returning to the deterministic workflow.
 
 The React client is an operations console rather than a black-box demo. It polls asynchronous processing runs, exposes per-stage evidence, supports human corrections, and downloads the exact submission contract. Express provides bounded and rate-limited APIs. MongoDB persists source hashes, runs, processing attempts, results, review cases, learned knowledge, cache entries, and audit events. A single production Docker image serves the compiled client and `/api`, while Docker Compose retains separate hot-reload services for local development.
 
