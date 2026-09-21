@@ -171,13 +171,6 @@ Parallel processing, retries, review overrides, and partial failures can easily 
 6. **Continuous evaluation:** add drift dashboards, larger labelled corpora, per-format extraction scores, calibrated confidence, and production cost/quality experiments.
 7. **Further cost optimization:** route easy fallbacks to smaller models, evaluate Batch API processing, increase prompt-cache reuse, and set per-run cost budgets.
 
-## Demo and evaluation evidence
-
-- [`docs/DEMO_SCRIPT.md`](docs/DEMO_SCRIPT.md) provides the rehearsable end-to-end judge flow.
-- [`docs/PRESENTATION.md`](docs/PRESENTATION.md) contains the presentation narrative and proof points.
-- [`docs/EVALUATION_LOG.md`](docs/EVALUATION_LOG.md) records frozen versions, repeatable checks, measured results, and known limitations.
-- [`IMPLEMENTATION_PLAN.md`](IMPLEMENTATION_PLAN.md) traces delivery across all five stages.
-
 ## Stack and prerequisites
 
 - React 19, Vite 8, Tailwind CSS 4, Node.js 24 LTS, Express 5, Mongoose 9, MongoDB 8.0.
@@ -334,8 +327,6 @@ npm run submission:export -- <runId> submission.json http://localhost:5000
 npm run submission:validate -- submission.json ../sdoc-hackathon-bundle
 npm audit --omit=dev
 ```
-
-Evaluation evidence and the rehearsable demo package are in [`docs/EVALUATION_LOG.md`](docs/EVALUATION_LOG.md), [`docs/DEMO_SCRIPT.md`](docs/DEMO_SCRIPT.md), and [`docs/PRESENTATION.md`](docs/PRESENTATION.md).
 
 Use Ctrl+C to stop an attached run. After Dockerfile or dependency changes, use `docker compose up --build`. Edit files under `client/src/` and `server/src/` on your host for hot reload; no rebuild is needed. Vite listens on `0.0.0.0`; polling is enabled for Docker Desktop mounts, and Nodemon polls the backend files.
 
