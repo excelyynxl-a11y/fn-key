@@ -4,6 +4,7 @@ import Email from '../models/Email.js';
 import ProcessingRun from '../models/ProcessingRun.js';
 import { createDatasetRepository } from '../repositories/datasetRepository.js';
 import { defaultDatasetPath, importDataset } from './inboxService.js';
+import { loadActiveEmailPhrases, seedEmailCategoryPhrases } from './phraseKnowledgeService.js';
 import { processEmail } from './pipelineService.js';
 
 const activeRuns = new Set();
@@ -25,20 +26,23 @@ function counterIncrement(processed) {
     'counts.queued': -1,
     'counts.processed': 1,
     'counts.classified': 1,
+    'counts.ruleClassified': processed.classification.method === 'rule' ? 1 : 0,
+    'counts.aiClassified': processed.classification.method === 'ai' ? 1 : 0,
+    'counts.aiCacheHits': processed.classification.cacheHit ? 1 : 0,
     'counts.compared': processed.result.category === 'BL_COMPARISON' ? 1 : 0,
     'counts.mismatched': processed.result.status === 'MISMATCH' ? 1 : 0,
     'counts.review': processed.result.status === 'NEEDS_REVIEW' ? 1 : 0
   };
 }
 
-async function processOneEmail(email, repository, runId) {
+async function processOneEmail(email, repository, runId, classificationOptions) {
   await Email.updateOne(
     { emailId: email.emailId },
     { $set: { processingState: 'processing', lastRunId: runId } }
   );
 
   try {
-    const processed = await processEmail(email, repository);
+    const processed = await processEmail(email, repository, classificationOptions);
     await Email.updateOne({ emailId: email.emailId }, {
       $set: {
         processingState: 'completed',
@@ -56,16 +60,17 @@ async function processOneEmail(email, repository, runId) {
     );
   } catch (error) {
     const safeMessage = error instanceof Error ? error.message : 'Unknown processing error';
+    const errorCode = error?.code ?? 'PROCESSING_FAILED';
     await Email.updateOne({ emailId: email.emailId }, {
       $set: {
         processingState: 'failed',
-        failure: { code: 'PROCESSING_FAILED', message: safeMessage, retryable: true },
+        failure: { code: errorCode, message: safeMessage, retryable: error?.retryable ?? true },
         lastRunId: runId
       }
     });
     await ProcessingRun.updateOne({ runId }, {
       $inc: { 'counts.queued': -1, 'counts.failed': 1 },
-      $push: { runErrors: { emailId: email.emailId, code: 'PROCESSING_FAILED', message: safeMessage } }
+      $push: { runErrors: { emailId: email.emailId, code: errorCode, message: safeMessage } }
     });
   }
 }
@@ -102,6 +107,9 @@ export async function executeRun(runId, { retryOnly = false } = {}) {
           queued: emails.length,
           processed: 0,
           classified: 0,
+          ruleClassified: 0,
+          aiClassified: 0,
+          aiCacheHits: 0,
           compared: 0,
           mismatched: 0,
           review: 0,
@@ -113,10 +121,12 @@ export async function executeRun(runId, { retryOnly = false } = {}) {
       }
     });
 
+    await seedEmailCategoryPhrases();
+    const phraseEntries = await loadActiveEmailPhrases();
     const repository = createDatasetRepository(defaultDatasetPath());
     const concurrency = Number.parseInt(process.env.PROCESSING_CONCURRENCY ?? '4', 10);
     await runWithConcurrency(emails, Number.isInteger(concurrency) ? concurrency : 4, (email) => (
-      processOneEmail(email, repository, runId)
+      processOneEmail(email, repository, runId, { phraseEntries })
     ));
 
     const completedRun = await ProcessingRun.findOne({ runId }).lean();

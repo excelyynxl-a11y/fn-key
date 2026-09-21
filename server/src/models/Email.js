@@ -72,7 +72,15 @@ const emailSchema = new mongoose.Schema({
     confidence: { type: Number, min: 0, max: 1, default: null },
     reason: { type: String, default: null },
     evidencePhrases: { type: [String], default: [] },
-    scores: { type: Map, of: Number, default: {} }
+    matchedEvidence: { type: [mongoose.Schema.Types.Mixed], default: [] },
+    scores: { type: Map, of: Number, default: {} },
+    scoreMargin: { type: Number, default: null },
+    cacheHit: { type: Boolean, default: false },
+    model: { type: String, default: null },
+    responseId: { type: String, default: null },
+    promptVersion: { type: String, default: null },
+    aiAttempts: { type: Number, min: 0, default: 0 },
+    usage: { type: mongoose.Schema.Types.Mixed, default: null }
   },
   documents: {
     si: { type: documentSchema, default: () => ({}) },

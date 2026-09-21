@@ -1,4 +1,4 @@
-import { classifyEmailByRules } from './classificationService.js';
+import { classifyEmail } from './adaptiveClassificationService.js';
 import { compareDocuments } from './comparisonService.js';
 import { identifyDocumentRoles } from './documentTypeService.js';
 import { extractRequiredFields } from './fieldExtractionService.js';
@@ -15,8 +15,9 @@ function reviewResult(category, reviewReason) {
   };
 }
 
-export async function processEmail(email, repository) {
-  const classification = classifyEmailByRules(email.source ?? email);
+export async function processEmail(email, repository, options = {}) {
+  const sourceEmail = { emailId: email.emailId ?? email.email_id, ...(email.source ?? email) };
+  const classification = await classifyEmail(sourceEmail, options);
   if (classification.category !== 'BL_COMPARISON') {
     return {
       classification,
@@ -78,4 +79,3 @@ export async function processEmail(email, repository) {
     }
   };
 }
-
