@@ -1,0 +1,104 @@
+import mongoose from 'mongoose';
+import {
+  COMPARISON_FIELDS,
+  COMPARISON_STATUSES,
+  EMAIL_CATEGORIES,
+  REVIEW_REASONS
+} from '../constants/challenge.js';
+
+const attachmentSchema = new mongoose.Schema({
+  reference: { type: String, required: true },
+  filename: { type: String, required: true },
+  extension: { type: String, required: true },
+  exists: { type: Boolean, required: true },
+  size: { type: Number, min: 0, default: null },
+  contentHash: { type: String, default: null },
+  parserStatus: {
+    type: String,
+    enum: ['pending', 'parsed', 'unreadable', 'unsupported'],
+    default: 'pending'
+  },
+  extractedText: { type: String, default: null },
+  parserWarnings: { type: [String], default: [] }
+}, { _id: false });
+
+const extractedFieldSchema = new mongoose.Schema({
+  rawValue: { type: String, default: null },
+  normalizedValue: { type: mongoose.Schema.Types.Mixed, default: null },
+  sourceLabel: { type: String, default: null },
+  evidence: { type: String, default: null },
+  location: {
+    page: { type: Number, default: null },
+    sheet: { type: String, default: null },
+    cell: { type: String, default: null },
+    line: { type: Number, default: null }
+  },
+  method: {
+    type: String,
+    enum: ['alias_rule', 'ai', 'human', 'missing'],
+    default: 'missing'
+  },
+  confidence: { type: Number, min: 0, max: 1, default: 0 }
+}, { _id: false });
+
+const documentSchema = new mongoose.Schema({
+  attachmentReference: { type: String, default: null },
+  documentType: { type: String, enum: ['SI', 'BL', 'UNKNOWN'], default: 'UNKNOWN' },
+  fields: {
+    type: Map,
+    of: extractedFieldSchema,
+    default: {}
+  }
+}, { _id: false });
+
+const emailSchema = new mongoose.Schema({
+  emailId: { type: String, required: true, unique: true, index: true },
+  sourceHash: { type: String, required: true },
+  source: {
+    from: { type: String, required: true },
+    subject: { type: String, default: '' },
+    body: { type: String, default: '' },
+    attachments: { type: [attachmentSchema], default: [] }
+  },
+  processingState: {
+    type: String,
+    enum: ['imported', 'queued', 'processing', 'completed', 'failed'],
+    default: 'imported',
+    index: true
+  },
+  classification: {
+    category: { type: String, enum: EMAIL_CATEGORIES, default: null },
+    method: { type: String, enum: ['rule', 'ai', 'human'], default: null },
+    confidence: { type: Number, min: 0, max: 1, default: null },
+    reason: { type: String, default: null },
+    evidencePhrases: { type: [String], default: [] },
+    scores: { type: Map, of: Number, default: {} }
+  },
+  documents: {
+    si: { type: documentSchema, default: () => ({}) },
+    bl: { type: documentSchema, default: () => ({}) }
+  },
+  result: {
+    category: { type: String, enum: EMAIL_CATEGORIES, default: null },
+    status: { type: String, enum: COMPARISON_STATUSES, default: null },
+    reviewReason: { type: String, enum: REVIEW_REASONS, default: null },
+    hasDefect: { type: Boolean, default: false },
+    defectFields: [{ type: String, enum: COMPARISON_FIELDS }],
+    fieldDetails: { type: Map, of: mongoose.Schema.Types.Mixed, default: {} }
+  },
+  failure: {
+    code: { type: String, default: null },
+    message: { type: String, default: null },
+    retryable: { type: Boolean, default: false }
+  },
+  lastRunId: { type: String, default: null, index: true },
+  pipelineVersion: { type: String, required: true }
+}, {
+  timestamps: true,
+  minimize: false
+});
+
+emailSchema.index({ lastRunId: 1, processingState: 1 });
+
+export const Email = mongoose.models.Email ?? mongoose.model('Email', emailSchema);
+export default Email;
