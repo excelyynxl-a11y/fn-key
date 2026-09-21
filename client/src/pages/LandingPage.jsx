@@ -185,7 +185,7 @@ const LandingPage = () => {
       const url = URL.createObjectURL(new Blob([JSON.stringify(submission, null, 2)], { type: 'application/json' }));
       const link = document.createElement('a');
       link.href = url;
-      link.download = `shipmail-submission-${run.runId}.json`;
+      link.download = `sdoc-submission-${run.runId}.json`;
       link.click();
       URL.revokeObjectURL(url);
     } catch (exportError) {

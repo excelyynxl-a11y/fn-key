@@ -4,7 +4,7 @@ import path from 'node:path';
 import test from 'node:test';
 import { detectFileFormat, parseAttachment } from '../src/services/fileParserService.js';
 
-const attachmentPath = path.resolve(process.cwd(), '..', 'shipmail-hackathon-bundle', 'attachments');
+const attachmentPath = path.resolve(process.cwd(), '..', 'sdoc-hackathon-bundle', 'attachments');
 
 async function parseFixture(filename) {
   const buffer = await readFile(path.join(attachmentPath, filename));

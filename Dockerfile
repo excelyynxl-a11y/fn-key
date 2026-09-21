@@ -15,14 +15,14 @@ RUN npm ci --omit=dev --no-audit --no-fund
 FROM node:24-bookworm-slim AS production
 
 ENV NODE_ENV=production \
-    DATASET_PATH=/app/shipmail-hackathon-bundle \
+    DATASET_PATH=/app/sdoc-hackathon-bundle \
     CLIENT_DIST_PATH=/app/client-dist
 
 WORKDIR /app/server
 COPY --from=server-dependencies /build/server/node_modules ./node_modules
 COPY server/ ./
 COPY --from=client-build /build/client/dist /app/client-dist
-COPY shipmail-hackathon-bundle/ /app/shipmail-hackathon-bundle/
+COPY sdoc-hackathon-bundle/ /app/sdoc-hackathon-bundle/
 
 USER node
 EXPOSE 10000

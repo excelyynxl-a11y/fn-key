@@ -13,7 +13,7 @@ const evaluationPath = new URL('./classification-dev-set.json', import.meta.url)
 const evaluation = JSON.parse(await fs.readFile(evaluationPath, 'utf8'));
 const inboxPath = process.env.DATASET_PATH
   ? path.join(path.resolve(process.env.DATASET_PATH), 'inbox')
-  : path.resolve(process.cwd(), '..', 'shipmail-hackathon-bundle', 'inbox');
+  : path.resolve(process.cwd(), '..', 'sdoc-hackathon-bundle', 'inbox');
 
 const rows = [];
 for (const example of evaluation.examples) {

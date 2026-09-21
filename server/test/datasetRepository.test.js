@@ -4,7 +4,7 @@ import test from 'node:test';
 import { createDatasetRepository, resolveInside } from '../src/repositories/datasetRepository.js';
 import { importDataset } from '../src/services/inboxService.js';
 
-const datasetPath = path.resolve(process.cwd(), '..', 'shipmail-hackathon-bundle');
+const datasetPath = path.resolve(process.cwd(), '..', 'sdoc-hackathon-bundle');
 
 test('loads and validates the complete local inbox', async () => {
   const repository = createDatasetRepository(datasetPath);

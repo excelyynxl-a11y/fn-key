@@ -17,7 +17,7 @@ export function createApp({
   const app = express();
   const resolvedClientDistPath = clientDistPath ? path.resolve(clientDistPath) : null;
   const apiIdentity = (_req, res) => res.json({
-    data: { service: 'shipmail-api', message: 'API is running' },
+    data: { service: 'sdoc-api', message: 'API is running' },
     error: null,
     meta: {}
   });

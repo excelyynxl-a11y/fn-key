@@ -1,6 +1,6 @@
-# Shipmail
+# FN Key - MERN development environment
 
-Shipmail is an adaptive shipping-document verification application built on React, Express, and MongoDB. The Stage 5 build imports and processes the 520-email challenge bundle, explains every classification and document decision, queues unresolved cases for human correction, exposes reversible knowledge controls, and reports operational coverage, latency, cache, cost, and review metrics. Structured AI or vision is used only for unresolved classifications, document roles, or fields; validated results are cached and never directly choose the final status.
+SDOC is an adaptive shipping-document verification application built on React, Express, and MongoDB. The Stage 5 build imports and processes the 520-email challenge bundle, explains every classification and document decision, queues unresolved cases for human correction, exposes reversible knowledge controls, and reports operational coverage, latency, cache, cost, and review metrics. Structured AI or vision is used only for unresolved classifications, document roles, or fields; validated results are cached and never directly choose the final status.
 
 The architecture is deterministic-first: auditable rules handle known evidence, structured AI handles uncertainty, and deterministic validation produces the final comparison status. This keeps routine processing fast and inexpensive without allowing model output to silently bypass the submission contract.
 
@@ -30,10 +30,10 @@ OPENAI_MODEL=gpt-5.5
 ```
 
 - Frontend: http://localhost:5173
-- Backend: http://localhost:5000 — `GET /` returns the Shipmail API identity envelope.
+- Backend: http://localhost:5000 — `GET /` returns the SDOC API identity envelope.
 - Readiness: http://localhost:5000/health — returns 200 when MongoDB is connected, otherwise 503.
 
-Host ports bind to loopback for local development. The backend uses `MONGO_URI` to connect to MongoDB Atlas or another reachable MongoDB deployment. Browser JavaScript uses the host API URL, because the browser cannot resolve Compose service names. The challenge bundle is mounted read-only at `/data/shipmail` inside the API container.
+Host ports bind to loopback for local development. The backend uses `MONGO_URI` to connect to MongoDB Atlas or another reachable MongoDB deployment. Browser JavaScript uses the host API URL, because the browser cannot resolve Compose service names. The challenge bundle is mounted read-only at `/data/sdoc` inside the API container.
 
 ## Deploy one Docker service on Render
 
@@ -42,7 +42,7 @@ The root [`Dockerfile`](Dockerfile) is the production image. It builds the React
 ### 1. Prepare MongoDB Atlas
 
 1. Create an Atlas cluster and a database user with a unique application password.
-2. Copy the Node.js SRV connection string and include a database name, for example `mongodb+srv://USER:PASSWORD@HOST/shipmail?retryWrites=true&w=majority`.
+2. Copy the Node.js SRV connection string and include a database name, for example `mongodb+srv://USER:PASSWORD@HOST/sdoc?retryWrites=true&w=majority`.
 3. In Atlas **Network Access**, add all outbound CIDR ranges shown under the Render service's **Connect > Outbound** tab. For a short-lived demo, `0.0.0.0/0` is simpler but less restrictive.
 
 ### 2. Create the Render service
@@ -51,7 +51,7 @@ The root [`Dockerfile`](Dockerfile) is the production image. It builds the React
 2. In Render select **New > Web Service**, connect the repository, and select that branch.
 3. Set **Language** to **Docker** and **Dockerfile Path** to `./Dockerfile`. Keep the repository root as the Docker build context.
 4. Do not add a build command, start command, or Docker command override. The image's `CMD` starts the API.
-5. Choose a service name before setting `CLIENT_ORIGIN`. For a service named `shipmail-demo`, the initial origin is `https://shipmail-demo.onrender.com`.
+5. Choose a service name before setting `CLIENT_ORIGIN`. For a service named `sdoc-demo`, the initial origin is `https://sdoc-demo.onrender.com`.
 6. Under **Advanced**, set **Health Check Path** to `/health`.
 
 ### 3. Add environment variables
@@ -61,7 +61,7 @@ Set these before the first deploy:
 | Variable | Required | Render value |
 | --- | --- | --- |
 | `MONGO_URI` | Yes | Full MongoDB Atlas SRV connection string, including the database name |
-| `CLIENT_ORIGIN` | Yes | Exact public origin, such as `https://shipmail-demo.onrender.com`; no trailing slash |
+| `CLIENT_ORIGIN` | Yes | Exact public origin, such as `https://sdoc-demo.onrender.com`; no trailing slash |
 | `OPENAI_API_KEY` | Recommended | OpenAI project API key; without it, unresolved AI fallbacks become review cases |
 | `OPENAI_MODEL` | Recommended | Model available to the API project; defaults to `gpt-5.5` |
 | `PROCESSING_CONCURRENCY` | Optional | `4`; use `2` on a memory-constrained instance |
@@ -77,7 +77,7 @@ Set these before the first deploy:
 
 Do **not** set `PORT`: Render injects it and the server already binds it on `0.0.0.0`. Do not set `VITE_API_URL`, `DATASET_PATH`, `CLIENT_DIST_PATH`, or `NODE_ENV` for this deployment; the production image supplies the correct same-origin and internal-path configuration. Never put the OpenAI or MongoDB secret into a `VITE_` variable.
 
-If a custom domain is added later, set `CLIENT_ORIGIN` to a comma-separated exact allowlist containing every browser origin that should work, for example `https://docs.example.com,https://shipmail-demo.onrender.com`, then redeploy.
+If a custom domain is added later, set `CLIENT_ORIGIN` to a comma-separated exact allowlist containing every browser origin that should work, for example `https://docs.example.com,https://sdoc-demo.onrender.com`, then redeploy.
 
 ### 4. Deploy and verify
 
@@ -157,7 +157,7 @@ Export and independently validate a completed run from `server/`:
 
 ```sh
 npm run submission:export -- <runId> submission.json http://localhost:5000
-npm run submission:validate -- submission.json ../shipmail-hackathon-bundle
+npm run submission:validate -- submission.json ../sdoc-hackathon-bundle
 npm audit --omit=dev
 ```
 
@@ -201,7 +201,7 @@ Compose reads a root `.env` and explicitly passes configuration to containers. K
 | `CLASSIFICATION_MIN_SCORE` | `4` | Minimum deterministic winning score |
 | `CLASSIFICATION_MIN_MARGIN` | `1.5` | Minimum lead over the second category |
 | `PROCESSING_CONCURRENCY` | `4` | Maximum emails processed concurrently |
-| `DATASET_PATH` | `/data/shipmail` in Compose | Read-only challenge bundle location |
+| `DATASET_PATH` | `/data/sdoc` in Compose | Read-only challenge bundle location |
 
 For the local Compose stack, if changing `PORT`, also update `VITE_API_URL`; if changing `CLIENT_PORT`, update `CLIENT_ORIGIN`. Run `docker compose up -d` after changing root environment values so containers are recreated with the new settings. Vite exposes `VITE_` variables to the browser: never place secrets in them. The backend also supports dotenv for optional direct Node execution; Docker supplies its environment through Compose.
 

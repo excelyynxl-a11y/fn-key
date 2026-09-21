@@ -1,4 +1,4 @@
-# Shipmail Hackathon — participant bundle
+# SDOC Hackathon — participant bundle
 
 Build a pipeline that reads this inbox and, for each email, decides:
 

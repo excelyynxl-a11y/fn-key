@@ -20,11 +20,11 @@ services:
       OPENAI_OUTPUT_COST_PER_MILLION: ${OPENAI_OUTPUT_COST_PER_MILLION:-0}
       CLASSIFICATION_MIN_SCORE: ${CLASSIFICATION_MIN_SCORE:-4}
       CLASSIFICATION_MIN_MARGIN: ${CLASSIFICATION_MIN_MARGIN:-1.5}
-      DATASET_PATH: /data/shipmail
+      DATASET_PATH: /data/sdoc
       PROCESSING_CONCURRENCY: ${PROCESSING_CONCURRENCY:-4}
     volumes:
       - ./server:/app
-      - ./shipmail-hackathon-bundle:/data/shipmail:ro
+      - ./sdoc-hackathon-bundle:/data/sdoc:ro
       - server_node_modules:/app/node_modules
     command: sh -c "npm ci --no-audit --no-fund && exec npm run dev"
     healthcheck:

@@ -1,8 +1,8 @@
-# Shipmail Adaptive Shipping Document Verification
+# SDOC Adaptive Shipping Document Verification
 
 ## Project Idea
 
-Shipmail is an AI-assisted email and shipping-document verification system. It reads each inbox email, identifies its category, and processes document-comparison requests by comparing the Shipping Instruction (SI) against the draft Bill of Lading (BL).
+SDOC is an AI-assisted email and shipping-document verification system. It reads each inbox email, identifies its category, and processes document-comparison requests by comparing the Shipping Instruction (SI) against the draft Bill of Lading (BL).
 
 The system follows an adaptive approach:
 
@@ -177,5 +177,5 @@ This creates meaningful AI and cloud integration while keeping repeated, well-un
 
 ## Key Value Proposition
 
-Shipmail does more than classify and compare a single batch of emails. It builds a reusable knowledge base from specific phrases and document labels discovered during processing. As the knowledge base grows, more emails and documents can be handled deterministically, reducing AI calls, processing cost, and response time while preserving AI support for unfamiliar cases.
+SDOC does more than classify and compare a single batch of emails. It builds a reusable knowledge base from specific phrases and document labels discovered during processing. As the knowledge base grows, more emails and documents can be handled deterministically, reducing AI calls, processing cost, and response time while preserving AI support for unfamiliar cases.
 

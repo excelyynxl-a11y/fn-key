@@ -13,7 +13,7 @@ import {
   syncReviewCase
 } from '../src/services/reviewService.js';
 
-const repository = createDatasetRepository(path.resolve(process.cwd(), '..', 'shipmail-hackathon-bundle'));
+const repository = createDatasetRepository(path.resolve(process.cwd(), '..', 'sdoc-hackathon-bundle'));
 
 function query(value) { return { async lean() { return value; } }; }
 
