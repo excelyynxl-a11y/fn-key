@@ -3,14 +3,17 @@ import mongoose from 'mongoose';
 const countSchema = new mongoose.Schema({
   total: { type: Number, min: 0, default: 0 },
   queued: { type: Number, min: 0, default: 0 },
+  processing: { type: Number, min: 0, default: 0 },
   processed: { type: Number, min: 0, default: 0 },
   classified: { type: Number, min: 0, default: 0 },
   ruleClassified: { type: Number, min: 0, default: 0 },
   aiClassified: { type: Number, min: 0, default: 0 },
   aiCacheHits: { type: Number, min: 0, default: 0 },
   compared: { type: Number, min: 0, default: 0 },
+  ok: { type: Number, min: 0, default: 0 },
   mismatched: { type: Number, min: 0, default: 0 },
   review: { type: Number, min: 0, default: 0 },
+  aiFallbacks: { type: Number, min: 0, default: 0 },
   failed: { type: Number, min: 0, default: 0 }
 }, { _id: false });
 

@@ -1,6 +1,6 @@
 import StatusBadge from './StatusBadge.jsx';
 
-export default function EmailTable({ emails, selectedEmailId, onSelect }) {
+export default function EmailTable({ emails, selectedEmailId, onSelect, meta, page, onPage }) {
   return (
     <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
       <div className="border-b border-slate-200 px-5 py-4">
@@ -36,6 +36,14 @@ export default function EmailTable({ emails, selectedEmailId, onSelect }) {
           </tbody>
         </table>
         {emails.length === 0 && <p className="p-8 text-center text-sm text-slate-500">No processed emails yet.</p>}
+      </div>
+      <div className="flex items-center justify-between border-t border-slate-200 px-4 py-3 text-xs text-slate-500">
+        <span>{meta?.total ?? emails.length} matching emails</span>
+        <div className="flex items-center gap-2">
+          <button type="button" disabled={page <= 1} onClick={() => onPage(page - 1)} className="rounded border border-slate-300 px-2 py-1 disabled:opacity-40">Previous</button>
+          <span>Page {page}</span>
+          <button type="button" disabled={page * (meta?.limit ?? 50) >= (meta?.total ?? 0)} onClick={() => onPage(page + 1)} className="rounded border border-slate-300 px-2 py-1 disabled:opacity-40">Next</button>
+        </div>
       </div>
     </div>
   );

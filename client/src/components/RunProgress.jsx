@@ -1,6 +1,20 @@
+import { useEffect, useState } from 'react';
 import StatusBadge from './StatusBadge.jsx';
 
-export default function RunProgress({ run }) {
+function elapsedLabel(startedAt, completedAt, now) {
+  if (!startedAt) return 'Not started';
+  const milliseconds = Math.max(0, new Date(completedAt ?? now).getTime() - new Date(startedAt).getTime());
+  const seconds = Math.floor(milliseconds / 1000);
+  return `${Math.floor(seconds / 60)}m ${seconds % 60}s`;
+}
+
+export default function RunProgress({ run, onFilter, onRetry, retrying }) {
+  const [now, setNow] = useState(Date.now());
+  useEffect(() => {
+    if (run.completedAt) return undefined;
+    const timer = window.setInterval(() => setNow(Date.now()), 1000);
+    return () => window.clearInterval(timer);
+  }, [run.completedAt]);
   const counts = run?.counts ?? {};
   const finished = (counts.processed ?? 0) + (counts.failed ?? 0);
   const total = counts.total ?? 0;
@@ -13,7 +27,15 @@ export default function RunProgress({ run }) {
           <p className="text-xs font-semibold uppercase tracking-[0.18em] text-blue-600">Processing run</p>
           <p className="mt-1 font-mono text-xs text-slate-500">{run.runId}</p>
         </div>
-        <StatusBadge value={run.state} />
+        <div className="flex items-center gap-3">
+          <span className="text-xs text-slate-500">Elapsed {elapsedLabel(run.startedAt, run.completedAt, now)}</span>
+          <StatusBadge value={run.state} />
+          {['completed', 'completed_with_errors', 'failed'].includes(run.state) && ((counts.review ?? 0) > 0 || (counts.failed ?? 0) > 0) && (
+            <button type="button" disabled={retrying} onClick={onRetry} className="rounded-lg border border-blue-200 px-3 py-1.5 text-xs font-semibold text-blue-700 hover:bg-blue-50 disabled:opacity-50">
+              {retrying ? 'Retrying…' : 'Retry review/failed'}
+            </button>
+          )}
+        </div>
       </div>
       <div className="mt-5 h-2 overflow-hidden rounded-full bg-slate-100">
         <div className="h-full rounded-full bg-blue-600 transition-all" style={{ width: `${percentage}%` }} />
@@ -22,22 +44,22 @@ export default function RunProgress({ run }) {
         <span>{finished} of {total} emails</span>
         <span>{percentage}%</span>
       </div>
-      <dl className="mt-5 grid grid-cols-2 gap-3 sm:grid-cols-3 xl:grid-cols-6">
+      <div className="mt-5 grid grid-cols-2 gap-3 sm:grid-cols-4 xl:grid-cols-7">
         {[
-          ['Rule classified', counts.ruleClassified ?? 0],
-          ['AI classified', counts.aiClassified ?? 0],
-          ['AI cache hits', counts.aiCacheHits ?? 0],
-          ['Compared', counts.compared ?? 0],
-          ['Mismatches', counts.mismatched ?? 0],
-          ['Needs review', counts.review ?? 0],
-          ['Failed', counts.failed ?? 0]
-        ].map(([label, value]) => (
-          <div key={label} className="rounded-xl bg-slate-50 p-3">
-            <dt className="text-xs text-slate-500">{label}</dt>
-            <dd className="mt-1 text-xl font-semibold text-slate-900">{value}</dd>
-          </div>
+          ['Total', total, {}],
+          ['Processing', counts.processing ?? 0, { processingState: 'processing' }],
+          ['OK', counts.ok ?? 0, { status: 'OK' }],
+          ['Mismatch', counts.mismatched ?? 0, { status: 'MISMATCH' }],
+          ['Needs review', counts.review ?? 0, { status: 'NEEDS_REVIEW' }],
+          ['Failed', counts.failed ?? 0, { processingState: 'failed' }],
+          ['AI fallback', counts.aiFallbacks ?? counts.aiClassified ?? 0, { method: 'ai' }]
+        ].map(([label, value, filter]) => (
+          <button type="button" onClick={() => onFilter(filter)} key={label} className="rounded-xl bg-slate-50 p-3 text-left transition hover:bg-blue-50 focus:outline-none focus:ring-2 focus:ring-blue-500">
+            <span className="block text-xs text-slate-500">{label}</span>
+            <strong className="mt-1 block text-xl font-semibold text-slate-900">{value}</strong>
+          </button>
         ))}
-      </dl>
+      </div>
     </section>
   );
 }

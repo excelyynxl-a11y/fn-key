@@ -3,6 +3,7 @@ import EmailTable from '../components/EmailTable.jsx';
 import AttachmentSummary from '../components/AttachmentSummary.jsx';
 import ClassificationEvidence from '../components/ClassificationEvidence.jsx';
 import FieldComparisonTable from '../components/FieldComparisonTable.jsx';
+import InboxFilters, { emptyInboxFilters } from '../components/InboxFilters.jsx';
 import RunProgress from '../components/RunProgress.jsx';
 import Sidebar from '../components/Sidebar.jsx';
 import StatusBadge from '../components/StatusBadge.jsx';
@@ -12,26 +13,39 @@ const LandingPage = () => {
   const [run, setRun] = useState(null);
   const [emails, setEmails] = useState([]);
   const [selectedEmail, setSelectedEmail] = useState(null);
+  const [filterDraft, setFilterDraft] = useState({ ...emptyInboxFilters });
+  const [appliedFilters, setAppliedFilters] = useState({ ...emptyInboxFilters });
+  const [emailMeta, setEmailMeta] = useState({ page: 1, limit: 50, total: 0 });
+  const [page, setPage] = useState(1);
+  const [retrying, setRetrying] = useState(false);
+  const [offline, setOffline] = useState(false);
   const [busy, setBusy] = useState(true);
   const [error, setError] = useState('');
 
-  const loadEmails = useCallback(async (runId) => {
-    const response = await request(`/api/emails?runId=${encodeURIComponent(runId)}&limit=100`);
+  const loadEmails = useCallback(async (runId, filters = emptyInboxFilters, requestedPage = 1) => {
+    const query = new URLSearchParams({ runId, limit: '50', page: String(requestedPage) });
+    Object.entries(filters).forEach(([key, value]) => {
+      if (value) query.set(key, value);
+    });
+    const response = await request(`/api/emails?${query}`);
     setEmails(response.data);
+    setEmailMeta(response.meta);
+    setPage(requestedPage);
     const preferred = response.data.find((email) => email.emailId === 'email_004') ?? response.data[0];
     if (preferred) {
       const detail = await request(`/api/emails/${preferred.emailId}?runId=${encodeURIComponent(runId)}`);
       setSelectedEmail(detail.data);
-    }
+    } else setSelectedEmail(null);
+    setOffline(false);
   }, []);
 
   const refreshRun = useCallback(async (runId) => {
     const response = await request(`/api/runs/${runId}`);
     setRun(response.data);
     if (['completed', 'completed_with_errors'].includes(response.data.state)) {
-      await loadEmails(runId);
+      await loadEmails(runId, appliedFilters, page);
     }
-  }, [loadEmails]);
+  }, [appliedFilters, loadEmails, page]);
 
   useEffect(() => {
     let cancelled = false;
@@ -40,10 +54,15 @@ const LandingPage = () => {
         if (cancelled || response.data.length === 0) return;
         setRun(response.data[0]);
         if (['completed', 'completed_with_errors'].includes(response.data[0].state)) {
-          await loadEmails(response.data[0].runId);
+          await loadEmails(response.data[0].runId, emptyInboxFilters, 1);
         }
       })
-      .catch((loadError) => !cancelled && setError(loadError.message))
+      .catch((loadError) => {
+        if (!cancelled) {
+          setError(loadError.message);
+          setOffline(loadError instanceof TypeError);
+        }
+      })
       .finally(() => !cancelled && setBusy(false));
     return () => { cancelled = true; };
   }, [loadEmails]);
@@ -85,6 +104,45 @@ const LandingPage = () => {
     }
   }
 
+  async function applyFilters(nextFilters = filterDraft, requestedPage = 1) {
+    if (!run) return;
+    setAppliedFilters(nextFilters);
+    setError('');
+    try {
+      await loadEmails(run.runId, nextFilters, requestedPage);
+    } catch (filterError) {
+      setError(filterError.message);
+      setOffline(filterError instanceof TypeError);
+    }
+  }
+
+  function clearFilters() {
+    const cleared = { ...emptyInboxFilters };
+    setFilterDraft(cleared);
+    applyFilters(cleared, 1);
+  }
+
+  function applySummaryFilter(filter) {
+    const next = { ...emptyInboxFilters, ...filter };
+    setFilterDraft({ ...emptyInboxFilters, ...filter });
+    applyFilters(next, 1);
+  }
+
+  async function retryRun() {
+    setRetrying(true);
+    setError('');
+    try {
+      const response = await request(`/api/runs/${run.runId}/retry`, { method: 'POST' });
+      setRun(response.data);
+      setEmails([]);
+      setSelectedEmail(null);
+    } catch (retryError) {
+      setError(retryError.message);
+    } finally {
+      setRetrying(false);
+    }
+  }
+
   return (
     <div className="min-h-screen lg:flex">
       <Sidebar />
@@ -105,10 +163,15 @@ const LandingPage = () => {
           </button>
         </header>
 
-        {error && <div className="mt-6 rounded-xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700">{error}</div>}
+        {error && <div className="mt-6 rounded-xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700">{offline ? 'Offline: ' : ''}{error}</div>}
+        {run?.runErrors?.length > 0 && (
+          <div className="mt-4 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800">
+            Partial errors: {run.runErrors.slice(0, 3).map(({ emailId, message }) => `${emailId ?? 'run'}: ${message}`).join(' · ')}
+          </div>
+        )}
         {busy && !run && <p className="mt-10 text-sm text-slate-500">Loading workspace…</p>}
 
-        {run && <div className="mt-8"><RunProgress run={run} /></div>}
+        {run && <div className="mt-8"><RunProgress run={run} onFilter={applySummaryFilter} onRetry={retryRun} retrying={retrying} /></div>}
 
         {!run && !busy && (
           <section className="mt-8 rounded-2xl border border-dashed border-slate-300 bg-white p-10 text-center">
@@ -117,9 +180,24 @@ const LandingPage = () => {
           </section>
         )}
 
-        {run && emails.length > 0 && (
+        {run && ['completed', 'completed_with_errors'].includes(run.state) && (
           <div className="mt-8 grid gap-6 xl:grid-cols-[minmax(360px,0.8fr)_minmax(0,1.5fr)]">
-            <EmailTable emails={emails} selectedEmailId={selectedEmail?.emailId} onSelect={selectEmail} />
+            <div className="space-y-3">
+              <InboxFilters
+                value={filterDraft}
+                onChange={setFilterDraft}
+                onApply={() => applyFilters(filterDraft, 1)}
+                onClear={clearFilters}
+              />
+              <EmailTable
+                emails={emails}
+                selectedEmailId={selectedEmail?.emailId}
+                onSelect={selectEmail}
+                meta={emailMeta}
+                page={page}
+                onPage={(nextPage) => applyFilters(appliedFilters, nextPage)}
+              />
+            </div>
             <section className="min-w-0 rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
               {selectedEmail ? (
                 <>

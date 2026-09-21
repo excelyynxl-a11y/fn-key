@@ -21,15 +21,17 @@ export async function runWithConcurrency(items, concurrency, worker) {
   }));
 }
 
-function counterIncrement(processed) {
+export function counterIncrement(processed) {
   return {
-    'counts.queued': -1,
+    'counts.processing': -1,
     'counts.processed': 1,
     'counts.classified': 1,
     'counts.ruleClassified': processed.classification.method === 'rule' ? 1 : 0,
     'counts.aiClassified': processed.classification.method === 'ai' ? 1 : 0,
     'counts.aiCacheHits': processed.classification.cacheHit ? 1 : 0,
+    'counts.aiFallbacks': processed.classification.method === 'ai' ? 1 : 0,
     'counts.compared': processed.result.category === 'BL_COMPARISON' ? 1 : 0,
+    'counts.ok': processed.result.status === 'OK' ? 1 : 0,
     'counts.mismatched': processed.result.status === 'MISMATCH' ? 1 : 0,
     'counts.review': processed.result.status === 'NEEDS_REVIEW' ? 1 : 0
   };
@@ -39,6 +41,10 @@ async function processOneEmail(email, repository, runId, classificationOptions) 
   await Email.updateOne(
     { emailId: email.emailId },
     { $set: { processingState: 'processing', lastRunId: runId } }
+  );
+  await ProcessingRun.updateOne(
+    { runId },
+    { $inc: { 'counts.queued': -1, 'counts.processing': 1 } }
   );
 
   try {
@@ -70,7 +76,7 @@ async function processOneEmail(email, repository, runId, classificationOptions) 
       }
     });
     await ProcessingRun.updateOne({ runId }, {
-      $inc: { 'counts.queued': -1, 'counts.failed': 1 },
+      $inc: { 'counts.processing': -1, 'counts.failed': 1 },
       $push: { runErrors: { emailId: email.emailId, code: errorCode, message: safeMessage } }
     });
   }
@@ -106,14 +112,17 @@ export async function executeRun(runId, { retryOnly = false } = {}) {
         counts: {
           total: emails.length,
           queued: emails.length,
+          processing: 0,
           processed: 0,
           classified: 0,
           ruleClassified: 0,
           aiClassified: 0,
           aiCacheHits: 0,
           compared: 0,
+          ok: 0,
           mismatched: 0,
           review: 0,
+          aiFallbacks: 0,
           failed: 0
         },
         runErrors: [],
